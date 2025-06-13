@@ -16,7 +16,7 @@
                 </div>
                 <div class="col d-flex justify-content-end">
                     <button class="btn btn-success btn-sm">Save Application</button>
-                    <button class="btn btn-primary btn-sm" data-toggle="modal" data-target="#printModal">Print Application</button>
+                    <button class="btn btn-primary btn-sm">Print Application</button>
                 </div>
             </div>
         </div>
@@ -143,20 +143,6 @@
                     </div>
                 </div>
                 <div class="col">
-                    <div class="col">
-                        <div class="form-group">
-                            <label for="exampleFormControlSelect1" class="form-control-label">Assigned Grave Digger</label>
-                            <select class="form-control" id="exampleFormControlSelect1">
-                                <option>1</option>
-                                <option>2</option>
-                                <option>3</option>
-                                <option>4</option>
-                                <option>5</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                <div class="col">
                     <div class="form-group">
                         <label for="example-text-input" class="form-control-label">Internment Schedule</label>
                         <input class="form-control" type="datetime-local" id="internment_sched">
@@ -164,7 +150,19 @@
                 </div>
             </div>
             <div class="row">
-                <div class="col-4">
+                <div class="col">
+                    <div class="form-group">
+                        <label for="exampleFormControlSelect1" class="form-control-label">Assigned Grave Digger</label>
+                        <select class="form-control" id="exampleFormControlSelect1">
+                            <option>1</option>
+                            <option>2</option>
+                            <option>3</option>
+                            <option>4</option>
+                            <option>5</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col">
                     <div class="form-group">
                     <label for="exampleFormControlSelect1" class="form-control-label">Select Verifier</label>
                     <select class="form-control" id="exampleFormControlSelect1">
@@ -176,6 +174,8 @@
                     </select>
                     </div>
                 </div>
+            </div>
+            <div class="row">
                 <div class="col">
                     <label for="example-text-input" class="form-control-label">Other Pertinent Information, if any</label>
                     <textarea class="form-control" id="other_info" rows="2" style="resize: none;"></textarea>
@@ -183,39 +183,5 @@
             </div>
         </div>
     </div>
-</div>
-
-<!-- Modal -->
-<div class="modal fade" id="printModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="exampleModalLabel">Fill Up Information</h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-          <span aria-hidden="true">&times;</span>
-        </button>
-      </div>
-      <div class="modal-body">
-        <div class="row">
-            <div class="col">
-                <div class="form-group">
-                  <label for="exampleFormControlSelect1" class="form-control-label">Select Verifier</label>
-                  <select class="form-control" id="exampleFormControlSelect1">
-                    <option>1</option>
-                    <option>2</option>
-                    <option>3</option>
-                    <option>4</option>
-                    <option>5</option>
-                  </select>
-                </div>
-            </div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-danger btn-sm" data-dismiss="modal">Close</button>
-        <button type="button" class="btn btn-primary btn-sm">Continue</button>
-      </div>
-    </div>
-  </div>
 </div>
 @endsection
