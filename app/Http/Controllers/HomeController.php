@@ -5,7 +5,12 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Response;
 use App\Models\User;
+use App\Models\GraveDiggers;
 use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
+use Yajra\DataTables\DataTables;
+use App\Models\Graves;
+
 
 class HomeController extends Controller
 {
@@ -19,15 +24,14 @@ class HomeController extends Controller
         return view('homepage');
     }
 
-    //LEVELS
-    public function Level_1()
+
+
+    //CEMETERY ALL DATA
+    public function cemetery_data()
     {
-        return view('Level.level_1');
+        return view('cemetery_data');
     }
-    public function Level_2()
-    {
-        return view('Level.level_2');
-    }
+
 
     //USERS
     public function list_of_users()
@@ -44,25 +48,30 @@ class HomeController extends Controller
     }
 
     public function user_details($id){
-          $user = User::find($id);
+         $user = User::find($id);
 
-        return Response::json($user);
+         return Response::json($user);
+
+         $user=User::all();
     }
 
 
     public function change_user_info(Request $request){
 
-        $user = User::where('id', $request->info_id)->first();
+          $user = User::where('id', $request->info_id)->first();
 
-        $user->lname = $request->last_name;
-        $user->fname = $request->first_name;
-        $user->mname = $request->middle_name;
-        $user->suffix = $request->suffix;
-        $user->designation = $request->designation;
-        $user->permission = $request->permission;
-        $user->active = $request->active;
+          $user->lname = $request->last_name;
+          $user->fname = $request->first_name;
+          $user->mname = $request->middle_name;
+          $user->suffix = $request->suffix;
+          $user->designation = $request->designation;
+          $user->permission = $request->permission;
+          $user->active = $request->active;
 
-       $user->save();
+          $user->save();
+
+
+
 
         return back()->with('message', "Successfully changed user details!");
 
@@ -70,9 +79,48 @@ class HomeController extends Controller
     }
 
     //BURIAL APPLICATION
-    public function burial_application_form()
+
+    //EXHUMATION
+      public function exhumation_application_form()
     {
-        
-        return view('burial_application_form');
+        return view('exhumation_application_form');
     }
+
+    //test
+      public function test()
+    {
+        return view('test');
+    }
+
+    public function test_list_of_users()
+    {
+         $User=User::all();
+
+        return DataTables::of($User)
+            ->setRowId('id')
+            ->make(true);
+
+    }
+
+
+    public function Test_edit_user(Request $request)
+    {
+        User::where('id', $request->info_id)
+            ->update([
+                'lname' => $request->last_name,
+                'fname' => $request->first_name,
+                'mname' => $request->middle_name,
+                'suffix' => $request->suffix,
+                'designation' => $request->designation,
+                'permission' => $request->permission,
+                'active ' => $request->status,
+                'updated_at' => Carbon::now(),
+
+            ]);
+
+        return back()->with('message', 'Successfully updated user information!');
+    }
+
+
+
 }

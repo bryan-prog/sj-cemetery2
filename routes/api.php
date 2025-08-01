@@ -1,10 +1,12 @@
 <?php
 
+use App\Http\Controllers\Api\BurialPermitApiController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\LoginApiController;
 use App\Http\Controllers\Api\RegisterController;
 use App\Http\Controllers\Api\RegisterApiController;
+use App\Http\Controllers\Api\RenewalPermitApiController;
 
 /*
 |--------------------------------------------------------------------------
@@ -32,6 +34,13 @@ Route::post('/register', [RegisterApiController::class, 'register']);
 
 
 Route::middleware('auth:sanctum')->group(function () {
+Route::get('/reservations-list', [RenewalPermitApiController::class, 'index']);
+Route::get('/renewals-list', [RenewalPermitApiController::class, 'listOfRenewals']);
+
+
+
+
+
 
 
 });

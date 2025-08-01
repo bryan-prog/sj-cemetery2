@@ -1,187 +1,204 @@
 @extends('layouts.masterlayout')
-@inject('carbon', 'Carbon\Carbon')
-<style>
-    .form-control{
-        color:black !important;
-    }
-</style>
-@section('content')
+@inject('carbon','Carbon\Carbon')
 
+<style>
+    .container.mt-3 {
+        max-width: 1225px !important;
+    }
+    .form-control, .form-control-label{
+        color:black !important; 
+        text-transform:uppercase;
+    }
+    h4.text-red.text-uppercase{
+        color: #ff0000 !important;
+    }
+    body{ background-image:url(assets/img/bg_cemetery.png); }
+</style>
+
+@section('content')
 <div class="container mt-3">
-    <div class="card">
-        <div class="card-header">
-            <div class="row">
-                <div class="col">
-                    <h3>APPLICATION FOR BURIAL PERMIT</h3>
-                </div>
-                <div class="col d-flex justify-content-end">
-                    <button class="btn btn-success btn-sm">Save Application</button>
-                    <button class="btn btn-primary btn-sm">Print Application</button>
-                </div>
-            </div>
+ <div class="card">
+  <div class="card-header d-flex justify-content-between">
+     <h3 class="mb-0"><img src="https://img.icons8.com/doodle/30/goodnotes.png" alt="goodnotes"/> APPLICATION FOR BURIAL PERMIT</h3>
+     {{-- <div>
+        <button class="btn btn-success btn-sm" disabled>Save Application</button>
+        <button class="btn btn-primary btn-sm" disabled>Print Application</button>
+     </div> --}}
+  </div>
+
+  <form id="burialForm" method="GET">
+   <div class="card-body">
+
+    @if(session('success'))
+       <div class="alert alert-success">{{ session('success') }}</div>
+    @endif
+
+    <h4 class="text-red text-uppercase mb-3"><u>Application Details</u></h4>
+    <div class="row">
+        <div class="col">
+           <label class="form-control-label"><img src="https://img.icons8.com/external-flaticons-lineal-color-flat-icons/20/external-date-business-flaticons-lineal-color-flat-icons.png"/> Date Applied</label>
+           <input name="date_applied" type="date" class="form-control"
+                  value="{{ now()->toDateString() }}">
         </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col">
-                    <div class="form-group">
-                        <label for="example-text-input" class="form-control-label">Date Applied</label>
-                        <input class="form-control" type="date" id="date_applied">
-                    </div>
-                </div>
-                <div class="col">
-                    <div class="form-group">
-                        <label for="example-text-input" class="form-control-label">Applicant's Name</label>
-                        <input class="form-control" type="text" placeholder="contact person" id="contact_person">
-                    </div>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col">
-                    <div class="form-group">
-                        <label for="example-text-input" class="form-control-label">Address</label>
-                        <input class="form-control" type="text" placeholder="address" id="contact_person_address">
-                    </div>
-                </div>
-                <div class="col">
-                    <div class="form-group">
-                        <label for="example-text-input" class="form-control-label">Contact Number</label>
-                        <input class="form-control" type="text" placeholder="contact number" id="contact_number">
-                    </div>
-                </div>
-                <div class="col">
-                    <div class="form-group">
-                        <label for="example-text-input" class="form-control-label">Relationship to the Deceased</label>
-                        <input class="form-control" type="text" placeholder="relationship" id="relationship">
-                    </div>
-                </div>
-            </div>
-            <hr class="mt-2 mb-4">
-            <div class="row">
-                <div class="col">
-                    <h4 class="text-red">DECEASED INFORMATION</h4>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col">
-                    <div class="form-group">
-                        <label for="example-text-input" class="form-control-label">Name of the Deceased</label>
-                        <input class="form-control" type="text" placeholder="name of deceased" id="name_of_deceased">
-                    </div>
-                </div>
-                <div class="col">
-                    <div class="form-group">
-                        <label for="example-text-input" class="form-control-label">Address of the Deceased before Death</label>
-                        <input class="form-control" type="text" placeholder="name of deceased" id="address_of_deceased">
-                    </div>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col">
-                    <div class="form-group">
-                        <label for="example-text-input" class="form-control-label">Date of Birth</label>
-                        <input class="form-control" type="date" id="deceased_birthdate">
-                    </div>
-                </div>
-                <div class="col">
-                    <div class="form-group">
-                        <label for="example-text-input" class="form-control-label">Date of Death</label>
-                        <input class="form-control" type="date" id="deceased_Deathdate">
-                    </div>
-                </div>
-                <div class="col">
-                    <div class="form-group">
-                        <label for="example-text-input" class="form-control-label">Burial Site/Location</label>
-                        <select class="form-control" id="Location">
-                            <option>---</option>
-                            <option>Restos (Above Apartment V)</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="col">
-                    <div class="form-group">
-                        <label for="example-text-input" class="form-control-label">Row</label>
-                        <select class="form-control" id="level_row">
-                            <option value="">---</option>
-                            <option>R1</option>
-                            <option>R2</option>
-                            <option>R3</option>
-                            <option>R4</option>
-                            <option>R5</option>
-                            <option>R6</option>
-                            <option>R7</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="col">
-                    <div class="form-group">
-                        <label for="example-text-input" class="form-control-label">Column Number</label>
-                        <select class="form-control" id="column_number">
-                            <option value="">---</option>
-                            <option>R1_1</option>
-                            <option>R1_2</option>
-                            <option>R1_3</option>
-                            <option>R1_4</option>
-                            <option>R1_5</option>
-                            <option>R1_6</option>
-                            <option>R1_7</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-            <hr class="mt-2 mb-4">
-            <div class="row">
-                <div class="col">
-                    <div class="form-group">
-                        <label for="example-text-input" class="form-control-label">Amount to be Paid</label>
-                        <input class="form-control" type="text" placeholder="" id="amount">
-                    </div>
-                </div>
-                <div class="col">
-                    <div class="form-group">
-                        <label for="example-text-input" class="form-control-label">Funeral Service</label>
-                        <input class="form-control" type="text" placeholder="name of deceased" id="funeral_service">
-                    </div>
-                </div>
-                <div class="col">
-                    <div class="form-group">
-                        <label for="example-text-input" class="form-control-label">Internment Schedule</label>
-                        <input class="form-control" type="datetime-local" id="internment_sched">
-                    </div>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col">
-                    <div class="form-group">
-                        <label for="exampleFormControlSelect1" class="form-control-label">Assigned Grave Digger</label>
-                        <select class="form-control" id="exampleFormControlSelect1">
-                            <option>1</option>
-                            <option>2</option>
-                            <option>3</option>
-                            <option>4</option>
-                            <option>5</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="col">
-                    <div class="form-group">
-                    <label for="exampleFormControlSelect1" class="form-control-label">Select Verifier</label>
-                    <select class="form-control" id="exampleFormControlSelect1">
-                        <option>1</option>
-                        <option>2</option>
-                        <option>3</option>
-                        <option>4</option>
-                        <option>5</option>
-                    </select>
-                    </div>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col">
-                    <label for="example-text-input" class="form-control-label">Other Pertinent Information, if any</label>
-                    <textarea class="form-control" id="other_info" rows="2" style="resize: none;"></textarea>
-                </div>
-            </div>
+        <div class="col">
+           <label class="form-control-label"><img src="https://img.icons8.com/doodle/20/apple-calendar--v1.png"/> Internment Schedule</label>
+           <input name="internment_sched" type="datetime-local" class="form-control">
         </div>
     </div>
+
+<hr class="mt-4 mb-4">
+    <h4 class="text-red text-uppercase my-3"><u>Burial Site Location</u></h4>
+    <div class="row">
+        <div class="col">
+            <label class="form-control-label"><img src="https://img.icons8.com/doodle/20/address.png"/> Burial Site</label>
+            <select id="burial_site_id" name="burial_site_id" class="form-control">
+                <option value="">-- Select burial site --</option>
+                @foreach($burial_sites as $site)
+                    <option value="{{ $site->id }}">{{ $site->name }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div class="col">
+            <label class="form-control-label"><img src="https://img.icons8.com/doodle/20/address.png"/> Level</label>
+            <select id="level_id" name="level_id" class="form-control">
+                <option value="">-- Select level --</option>
+            </select>
+        </div>
+    </div>
+
+<hr class="mt-4 mb-4">
+    <h4 class="text-red text-uppercase my-3"><u>Applicant Details</u></h4>
+    <div class="row">
+        <div class="col">
+            <label class="form-control-label"><img src="https://img.icons8.com/doodle/20/name.png"/> Name</label>
+            <input name="applicant_name" class="form-control" type="text">
+        </div>
+        <div class="col">
+            <label class="form-control-label"><img src="https://img.icons8.com/doodle/20/marker--v1.png"/> Address</label>
+            <input name="applicant_address" class="form-control" type="text">
+        </div>
+        <div class="col">
+            <label class="form-control-label"><img src="https://img.icons8.com/doodle/20/apple-phone.png"/> Contact No.</label>
+            <input name="applicant_contact_no" class="form-control" type="text">
+        </div>
+         <div class="col">
+            <label class="form-control-label"><img src="https://img.icons8.com/stickers/20/family.png"/> Relationship to Deceased</label>
+            <input name="relationship_to_deceased" class="form-control" type="text">
+        </div>
+    </div>
+
+<hr class="mt-4 mb-4">
+    <h4 class="text-red text-uppercase my-3"><u>Deceased Information</u></h4>
+    <div class="row">
+        <div class="col-md-3">
+            <label class="form-control-label"><img src="https://img.icons8.com/plasticine/20/headstone.png"/> Name</label>
+            <input name="name_of_deceased" class="form-control" type="text">
+        </div>
+        <div class="col-md-3">
+            <label class="form-control-label"><img src="https://img.icons8.com/doodle/20/marker--v1.png"/> Address Before Death</label>
+            <input name="address_before_death" class="form-control" type="text">
+        </div>
+        <div class="col-md-2">
+            <label class="form-control-label"><img src="https://img.icons8.com/stickers/20/gender.png"/> Sex</label>
+            <select name="sex" class="form-control">
+                <option value="">----</option>
+                <option value="MALE">MALE</option>
+                <option value="FEMALE">FEMALE</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-control-label"><img src="https://img.icons8.com/arcade/20/birth-date.png"/> Birth Date</label>
+            <input name="date_of_birth" class="form-control" type="date">
+        </div>
+        <div class="col-md-2">
+            <label class="form-control-label"><img src="https://img.icons8.com/stickers/20/self-destruct-button.png"/> Death Date</label>
+            <input name="date_of_death" class="form-control" type="date">
+        </div>
+    </div>
+
+<hr class="mt-4 mb-4">
+    <h4 class="text-red text-uppercase my-3"><u>Payment / Miscellaneous</u></h4>
+    <div class="row">
+        <div class="col-md-4">
+            <label class="form-control-label"><img src="https://img.icons8.com/doodle/20/refund.png"/> Amount as per Ordinance.</label>
+            <input name="amount_as_per_ord" class="form-control" type="text">
+        </div>
+        <div class="col-md-4">
+            <label class="form-control-label"><img src="https://img.icons8.com/plasticine/20/headstone.png"/> Funeral Service</label>
+            <input name="funeral_service" class="form-control" type="text">
+        </div>
+
+    </div>
+
+<hr class="mt-4 mb-4">
+    <h4 class="text-red text-uppercase my-3"><u>Assigned Personnel</u></h4>
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label class="form-control-label"><img src="https://img.icons8.com/doodle/20/safety-hat.png"/> Grave Digger</label>
+            <select name="grave_diggers_id" class="form-control">
+               <option value="">----</option>
+               @foreach($grave_diggers as $g)
+                   <option value="{{ $g->id }}">{{ $g->name }}</option>
+               @endforeach
+            </select>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label class="form-control-label"><img src="https://img.icons8.com/doodle/20/manager.png"/> Verifier</label>
+            <select name="verifiers_id" class="form-control">
+               <option value="">----</option>
+               @foreach($verifiers as $v)
+                   <option value="{{ $v->id }}">{{ $v->name_of_verifier }}</option>
+               @endforeach
+            </select>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-control-label">Other Information</label>
+        <textarea name="other_info" rows="3" class="form-control" style="resize: none;"></textarea>
+    </div>
+
+    <div class="d-flex justify-content-end">
+       <button type="button" id="chooseSlot" class="btn btn-info">
+            Proceed to Location
+       </button>
+    </div>
+   </div>
+  </form>
+ </div>
 </div>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script>
+$(function () {
+
+
+    $('#burial_site_id').on('change', function () {
+        const siteId = $(this).val();
+        const $lvl   = $('#level_id').empty()
+                        .append('<option value="">-- Select level --</option>');
+
+        if (!siteId) { return; }
+
+        $.get(`{{ url('/') }}/api/burial-sites/${siteId}/levels`, function (levels) {
+            levels.forEach(lvl =>
+                $lvl.append(`<option value="${lvl.id}">${lvl.level_no}</option>`)
+            );
+        });
+    });
+
+
+    $('#chooseSlot').on('click', function () {
+        const siteId  = $('#burial_site_id').val(),
+              levelId = $('#level_id').val();
+
+        if (!siteId)  { alert('Please choose a burial site.'); return; }
+        if (!levelId) { alert('Please choose a level.');       return; }
+
+        $('#burialForm')
+            .attr('action', `{{ url('/') }}/levels/${levelId}/reserve`)
+            .submit();
+    });
+});
+</script>
 @endsection

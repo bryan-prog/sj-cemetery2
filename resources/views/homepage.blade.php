@@ -1,16 +1,24 @@
 @extends('layouts.masterlayout')
 @inject('carbon', 'Carbon\Carbon')
 <style>
-    .container {
+    .container.mt-5 {
         max-width: 1830px !important;
+    }
+    body{
+        background-image: url(assets/img/bg_cemetery.png);
+        overflow:hidden;
     }
 </style>
  @section('content')
 
  <div class="container mt-5">
   <div class="row mb-3 d-flex justify-content-end">
+      <a href="{{URL('/renewals')}}"><button class="btn btn-warning mr-2">See Renewal Requests</button></a>
+      <a href="{{URL('/exhumations/requests')}}"><button class="btn btn-primary mr-2">See Exhumation Requests</button></a>
       <a href="{{URL('/burial_application_form')}}"><button class="btn btn-danger mr-2">Apply for Burial Permit</button></a>
-      <a href=""><button class="btn btn-info">See Database</button></a>
+      <a href="{{URL('/cemetery_data')}}"><button class="btn btn-info">See Database</button></a>
+
+
   </div>
   <div class="row">
     <div class="col-xl-3 col-md-6">
@@ -102,10 +110,10 @@
                   </div>
                 </div>
                 <div class="col">
-                  <a href="{{URL('/Level_1')}}"><button type="button" class="btn btn-sm btn-success">View</button></a>
+                  <a href="{{route('level.show', 1)}}"><button type="button" class="btn btn-sm btn-success">View</button></a>
                 </div>
               </div>
-            </li> 
+            </li>
             <li class="list-group-item px-0">
               <div class="row align-items-center">
                 <div class="col">
@@ -117,10 +125,10 @@
                   </div>
                 </div>
                 <div class="col">
-                   <a href="{{URL('/Level_2')}}"><button type="button" class="btn btn-sm btn-success">View</button></a>
+                   <a href="{{route('level.show', 2)}}"><button type="button" class="btn btn-sm btn-success">View</button></a>
                 </div>
               </div>
-            </li> 
+            </li>
             <li class="list-group-item px-0">
               <div class="row align-items-center">
                 <div class="col">
@@ -132,10 +140,10 @@
                   </div>
                 </div>
                 <div class="col">
-                  <button type="button" class="btn btn-sm btn-success">View</button>
+                  <a href="{{route('level.show', 3)}}"><button type="button" class="btn btn-sm btn-success">View</button></a>
                 </div>
               </div>
-            </li> 
+            </li>
             <li class="list-group-item px-0">
               <div class="row align-items-center">
                 <div class="col">
@@ -147,10 +155,10 @@
                   </div>
                 </div>
                 <div class="col">
-                  <button type="button" class="btn btn-sm btn-success">View</button>
+                  <a href="{{route('level.show', 4)}}"><button type="button" class="btn btn-sm btn-success">View</button></a>
                 </div>
               </div>
-            </li> 
+            </li>
             <li class="list-group-item px-0">
               <div class="row align-items-center">
                 <div class="col">
@@ -162,10 +170,10 @@
                   </div>
                 </div>
                 <div class="col">
-                  <button type="button" class="btn btn-sm btn-success">View</button>
+                  <a href="{{route('level.show', 5)}}"><button type="button" class="btn btn-sm btn-success">View</button></a>
                 </div>
               </div>
-            </li> 
+            </li>
             <li class="list-group-item px-0">
               <div class="row align-items-center">
                 <div class="col">
@@ -177,10 +185,10 @@
                   </div>
                 </div>
                 <div class="col">
-                  <button type="button" class="btn btn-sm btn-success">View</button>
+                  <a href="{{route('level.show', 6)}}"><button type="button" class="btn btn-sm btn-success">View</button></a>
                 </div>
               </div>
-            </li> 
+            </li>
             <li class="list-group-item px-0">
               <div class="row align-items-center">
                 <div class="col">
@@ -192,10 +200,10 @@
                   </div>
                 </div>
                 <div class="col">
-                  <button type="button" class="btn btn-sm btn-success">View</button>
+                <a href="{{route('level.show', 7)}}">   <button type="button" class="btn btn-sm btn-success">View</button> </a>
                 </div>
               </div>
-            </li> 
+            </li>
           </ul>
         </div>
       </div>
@@ -214,8 +222,8 @@
           </div>
         </div>
         <div class="table-responsive">
-          <!-- Projects table -->
-          <table class="table align-items-center table-flush">
+
+          <table class="table align-items-center table-flush" id="datatable-basic">
             <thead class="thead-light">
               <tr>
                 <th scope="col">Applicant's Name</th>

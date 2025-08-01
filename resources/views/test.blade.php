@@ -6,11 +6,12 @@
     .form-control-label{
         font-size: 15px !important;
         color:black !important;
-        font-weight:500 !important;
+        font-weight:400 !important;
     }
     .form-control{
         color:black !important;
         border: 1px solid rgb(61, 61, 61) !important;
+        font-weight:700 !important;
     }
     table{
         border:1px solid #e9ecef !important;

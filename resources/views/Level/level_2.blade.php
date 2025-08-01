@@ -4,7 +4,7 @@
     .parent {
         display: grid;
         grid-template-columns: repeat(36, 1fr);
-        grid-template-rows: repeat(8, 1fr);
+        grid-template-rows: repeat(7, 1fr);
         grid-column-gap: 0px;
         grid-row-gap: 10px;
     }
@@ -62,31 +62,31 @@
     <div class="parent">
         
         <!-- ROW 7 -->
-        <button class="taken"><div>R7_1</div></button>
-        <button class="taken"><div>R7_2</div></button>
-        <button class="taken"><div>R7_3</div></button>
-        <button class="taken"><div>R7_4</div></button>
-        <button class="taken"><div>R7_5</div></button>
-        <button class="taken"><div>R7_6</div></button>
-        <button class="no_lapida"><div>R7_7</div></button>
-        <button class="taken"><div>R7_8</div></button>
-        <button class="no_lapida"><div>R7_9</div></button>
-        <button class="taken"><div>R7_10</div></button>
-        <button class="taken"><div>R7_11</div></button>
-        <button class="taken"><div>R7_12</div></button>
-        <button class="taken"><div>R7_13</div></button>
-        <button class="taken"><div>R7_14</div></button>
-        <button class="taken"><div>R7_15</div></button>
-        <button class="taken"><div>R7_16</div></button>
-        <button class="taken"><div>R7_17</div></button>
-        <button class="taken"><div>R7_18</div></button>
-        <button class="no_lapida"><div>R7_19</div></button>
-        <button class="taken"><div>R7_20</div></button>
-        <button class="taken"><div>R7_21</div></button>
-        <button class="no_lapida"><div>R7_22</div></button>
-        <button class="taken"><div>R7_23</div></button>
-        <button class="taken"><div>R7_24</div></button>
-        <button class="taken"><div>R7_25</div></button>
+        <button class="available"><div>R7_1</div></button>
+        <button class="available"><div>R7_2</div></button>
+        <button class="available"><div>R7_3</div></button>
+        <button class="available"><div>R7_4</div></button>
+        <button class="available"><div>R7_5</div></button>
+        <button class="available"><div>R7_6</div></button>
+        <button class="available"><div>R7_7</div></button>
+        <button class="available"><div>R7_8</div></button>
+        <button class="available"><div>R7_9</div></button>
+        <button class="available"><div>R7_10</div></button>
+        <button class="available"><div>R7_11</div></button>
+        <button class="available"><div>R7_12</div></button>
+        <button class="available"><div>R7_13</div></button>
+        <button class="available"><div>R7_14</div></button>
+        <button class="available"><div>R7_15</div></button>
+        <button class="available"><div>R7_16</div></button>
+        <button class="available"><div>R7_17</div></button>
+        <button class="available"><div>R7_18</div></button>
+        <button class="available"><div>R7_19</div></button>
+        <button class="available"><div>R7_20</div></button>
+        <button class="available"><div>R7_21</div></button>
+        <button class="available"><div>R7_22</div></button>
+        <button class="available"><div>R7_23</div></button>
+        <button class="available"><div>R7_24</div></button>
+        <button class="available"><div>R7_25</div></button>
         <button class="available"><div>R7_26</div></button>
         <button class="available"><div>R7_27</div></button>
         <button class="available"><div>R7_28</div></button>
@@ -100,231 +100,231 @@
         <button class="available"><div>R7_36</div></button>
 
         <!-- ROW 6 -->
-        <button class="taken"><div>R6_1</div></button>
-        <button class="taken"><div>R6_2</div></button>
-        <button class="taken"><div>R6_3</div></button>
-        <button class="taken"><div>R6_4</div></button>
-        <button class="taken"><div>R6_5</div></button>
-        <button class="taken"><div>R6_6</div></button>
-        <button class="taken"><div>R6_7</div></button>
-        <button class="taken"><div>R6_8</div></button>
-        <button class="no_lapida"><div>R6_9</div></button>
-        <button class="taken"><div>R6_10</div></button>
-        <button class="taken"><div>R6_11</div></button>
-        <button class="taken"><div>R6_12</div></button>
-        <button class="taken"><div>R6_13</div></button>
-        <button class="taken"><div>R6_14</div></button>
-        <button class="taken"><div>R6_15</div></button>
-        <button class="no_lapida"><div>R6_16</div></button>
-        <button class="taken"><div>R6_17</div></button>
-        <button class="taken"><div>R6_18</div></button>
-        <button class="taken"><div>R6_19</div></button>
-        <button class="taken"><div>R6_20</div></button>
-        <button class="no_lapida"><div>R6_21</div></button>
-        <button class="taken"><div>R6_22</div></button>
-        <button class="taken"><div>R6_23</div></button>
-        <button class="taken"><div>R6_24</div></button>
-        <button class="taken"><div>R6_25</div></button>
-        <button class="taken"><div>R6_26</div></button>
-        <button class="taken"><div>R6_27</div></button>
-        <button class="taken"><div>R6_28</div></button>
-        <button class="taken"><div>R6_29</div></button>
-        <button class="taken"><div>R6_30</div></button>
-        <button class="taken"><div>R6_31</div></button>
-        <button class="taken"><div>R6_32</div></button>
-        <button class="taken"><div>R6_33</div></button>
-        <button class="taken"><div>R6_34</div></button>
+        <button class="available"><div>R6_1</div></button>
+        <button class="available"><div>R6_2</div></button>
+        <button class="available"><div>R6_3</div></button>
+        <button class="available"><div>R6_4</div></button>
+        <button class="available"><div>R6_5</div></button>
+        <button class="available"><div>R6_6</div></button>
+        <button class="available"><div>R6_7</div></button>
+        <button class="available"><div>R6_8</div></button>
+        <button class="available"><div>R6_9</div></button>
+        <button class="available"><div>R6_10</div></button>
+        <button class="available"><div>R6_11</div></button>
+        <button class="available"><div>R6_12</div></button>
+        <button class="available"><div>R6_13</div></button>
+        <button class="available"><div>R6_14</div></button>
+        <button class="available"><div>R6_15</div></button>
+        <button class="available"><div>R6_16</div></button>
+        <button class="available"><div>R6_17</div></button>
+        <button class="available"><div>R6_18</div></button>
+        <button class="available"><div>R6_19</div></button>
+        <button class="available"><div>R6_20</div></button>
+        <button class="available"><div>R6_21</div></button>
+        <button class="available"><div>R6_22</div></button>
+        <button class="available"><div>R6_23</div></button>
+        <button class="available"><div>R6_24</div></button>
+        <button class="available"><div>R6_25</div></button>
+        <button class="available"><div>R6_26</div></button>
+        <button class="available"><div>R6_27</div></button>
+        <button class="available"><div>R6_28</div></button>
+        <button class="available"><div>R6_29</div></button>
+        <button class="available"><div>R6_30</div></button>
+        <button class="available"><div>R6_31</div></button>
+        <button class="available"><div>R6_32</div></button>
+        <button class="available"><div>R6_33</div></button>
+        <button class="available"><div>R6_34</div></button>
         <button class="available"><div>R6_35</div></button>
         <button class="available"><div>R6_36</div></button>
 
         <!-- ROW 5 -->
-        <button class="taken"><div>R5_1</div></button>
-        <button class="no_lapida"><div>R5_2</div></button>
-        <button class="taken"><div>R5_3</div></button>
-        <button class="taken"><div>R5_4</div></button>
-        <button class="taken"><div>R5_5</div></button>
-        <button class="taken"><div>R5_6</div></button>
-        <button class="taken"><div>R5_7</div></button>
-        <button class="taken"><div>R5_8</div></button>
-        <button class="taken"><div>R5_9</div></button>
-        <button class="taken"><div>R5_10</div></button>
-        <button class="taken"><div>R5_11</div></button>
-        <button class="taken"><div>R5_12</div></button>
-        <button class="taken"><div>R5_13</div></button>
-        <button class="taken"><div>R5_14</div></button>
-        <button class="taken"><div>R5_15</div></button>
-        <button class="taken"><div>R5_16</div></button>
-        <button class="taken"><div>R5_17</div></button>
-        <button class="taken"><div>R5_18</div></button>
-        <button class="taken"><div>R5_19</div></button>
-        <button class="taken"><div>R5_20</div></button>
-        <button class="taken"><div>R5_21</div></button>
-        <button class="taken"><div>R5_22</div></button>
-        <button class="taken"><div>R5_23</div></button>
-        <button class="taken"><div>R5_24</div></button>
-        <button class="taken"><div>R5_25</div></button>
-        <button class="taken"><div>R5_26</div></button>
-        <button class="taken"><div>R5_27</div></button>
-        <button class="taken"><div>R5_28</div></button>
-        <button class="taken"><div>R5_29</div></button>
-        <button class="taken"><div>R5_30</div></button>
-        <button class="taken"><div>R5_31</div></button>
-        <button class="taken"><div>R5_32</div></button>
-        <button class="taken"><div>R5_33</div></button>
-        <button class="taken"><div>R5_34</div></button>
-        <button class="taken"><div>R5_35</div></button>
+        <button class="available"><div>R5_1</div></button>
+        <button class="available"><div>R5_2</div></button>
+        <button class="available"><div>R5_3</div></button>
+        <button class="available"><div>R5_4</div></button>
+        <button class="available"><div>R5_5</div></button>
+        <button class="available"><div>R5_6</div></button>
+        <button class="available"><div>R5_7</div></button>
+        <button class="available"><div>R5_8</div></button>
+        <button class="available"><div>R5_9</div></button>
+        <button class="available"><div>R5_10</div></button>
+        <button class="available"><div>R5_11</div></button>
+        <button class="available"><div>R5_12</div></button>
+        <button class="available"><div>R5_13</div></button>
+        <button class="available"><div>R5_14</div></button>
+        <button class="available"><div>R5_15</div></button>
+        <button class="available"><div>R5_16</div></button>
+        <button class="available"><div>R5_17</div></button>
+        <button class="available"><div>R5_18</div></button>
+        <button class="available"><div>R5_19</div></button>
+        <button class="available"><div>R5_20</div></button>
+        <button class="available"><div>R5_21</div></button>
+        <button class="available"><div>R5_22</div></button>
+        <button class="available"><div>R5_23</div></button>
+        <button class="available"><div>R5_24</div></button>
+        <button class="available"><div>R5_25</div></button>
+        <button class="available"><div>R5_26</div></button>
+        <button class="available"><div>R5_27</div></button>
+        <button class="available"><div>R5_28</div></button>
+        <button class="available"><div>R5_29</div></button>
+        <button class="available"><div>R5_30</div></button>
+        <button class="available"><div>R5_31</div></button>
+        <button class="available"><div>R5_32</div></button>
+        <button class="available"><div>R5_33</div></button>
+        <button class="available"><div>R5_34</div></button>
+        <button class="available"><div>R5_35</div></button>
         <button class="available"><div>R5_36</div></button>
 
         <!-- ROW 4 -->
-        <button class="taken"><div>R4_1</div></button>
-        <button class="taken"><div>R4_2</div></button>
-        <button class="taken"><div>R4_3</div></button>
-        <button class="taken"><div>R4_4</div></button>
-        <button class="taken"><div>R4_5</div></button>
-        <button class="taken"><div>R4_6</div></button>
-        <button class="taken"><div>R4_7</div></button>
-        <button class="no_lapida"><div>R4_8</div></button>
-        <button class="taken"><div>R4_9</div></button>
-        <button class="taken"><div>R4_10</div></button>
-        <button class="taken"><div>R4_11</div></button>
-        <button class="taken"><div>R4_12</div></button>
-        <button class="taken"><div>R4_13</div></button>
-        <button class="taken"><div>R4_14</div></button>
-        <button class="taken"><div>R4_15</div></button>
-        <button class="taken"><div>R4_16</div></button>
-        <button class="taken"><div>R4_17</div></button>
-        <button class="taken"><div>R4_18</div></button>
-        <button class="taken"><div>R4_19</div></button>
-        <button class="taken"><div>R4_20</div></button>
-        <button class="taken"><div>R4_21</div></button>
-        <button class="taken"><div>R4_22</div></button>
-        <button class="taken"><div>R4_23</div></button>
-        <button class="taken"><div>R4_24</div></button>
-        <button class="taken"><div>R4_25</div></button>
-        <button class="taken"><div>R4_26</div></button>
-        <button class="taken"><div>R4_27</div></button>
-        <button class="taken"><div>R4_28</div></button>
-        <button class="taken"><div>R4_29</div></button>
-        <button class="taken"><div>R4_30</div></button>
-        <button class="taken"><div>R4_31</div></button>
-        <button class="taken"><div>R4_32</div></button>
-        <button class="taken"><div>R4_33</div></button>
-        <button class="taken"><div>R4_34</div></button>
-        <button class="taken"><div>R4_35</div></button>
-        <button class="taken"><div>R4_36</div></button>
+        <button class="available"><div>R4_1</div></button>
+        <button class="available"><div>R4_2</div></button>
+        <button class="available"><div>R4_3</div></button>
+        <button class="available"><div>R4_4</div></button>
+        <button class="available"><div>R4_5</div></button>
+        <button class="available"><div>R4_6</div></button>
+        <button class="available"><div>R4_7</div></button>
+        <button class="available"><div>R4_8</div></button>
+        <button class="available"><div>R4_9</div></button>
+        <button class="available"><div>R4_10</div></button>
+        <button class="available"><div>R4_11</div></button>
+        <button class="available"><div>R4_12</div></button>
+        <button class="available"><div>R4_13</div></button>
+        <button class="available"><div>R4_14</div></button>
+        <button class="available"><div>R4_15</div></button>
+        <button class="available"><div>R4_16</div></button>
+        <button class="available"><div>R4_17</div></button>
+        <button class="available"><div>R4_18</div></button>
+        <button class="available"><div>R4_19</div></button>
+        <button class="available"><div>R4_20</div></button>
+        <button class="available"><div>R4_21</div></button>
+        <button class="available"><div>R4_22</div></button>
+        <button class="available"><div>R4_23</div></button>
+        <button class="available"><div>R4_24</div></button>
+        <button class="available"><div>R4_25</div></button>
+        <button class="available"><div>R4_26</div></button>
+        <button class="available"><div>R4_27</div></button>
+        <button class="available"><div>R4_28</div></button>
+        <button class="available"><div>R4_29</div></button>
+        <button class="available"><div>R4_30</div></button>
+        <button class="available"><div>R4_31</div></button>
+        <button class="available"><div>R4_32</div></button>
+        <button class="available"><div>R4_33</div></button>
+        <button class="available"><div>R4_34</div></button>
+        <button class="available"><div>R4_35</div></button>
+        <button class="available"><div>R4_36</div></button>
 
         <!-- ROW 3 -->
-        <button class="taken"><div>R3_1</div></button>
-        <button class="taken"><div>R3_2</div></button>
-        <button class="taken"><div>R3_3</div></button>
-        <button class="taken"><div>R3_4</div></button>
-        <button class="taken"><div>R3_5</div></button>
-        <button class="taken"><div>R3_6</div></button>
-        <button class="taken"><div>R3_7</div></button>
-        <button class="taken"><div>R3_8</div></button>
-        <button class="taken"><div>R3_9</div></button>
-        <button class="taken"><div>R3_10</div></button>
-        <button class="taken"><div>R3_11</div></button>
-        <button class="taken"><div>R3_12</div></button>
+        <button class="available"><div>R3_1</div></button>
+        <button class="available"><div>R3_2</div></button>
+        <button class="available"><div>R3_3</div></button>
+        <button class="available"><div>R3_4</div></button>
+        <button class="available"><div>R3_5</div></button>
+        <button class="available"><div>R3_6</div></button>
+        <button class="available"><div>R3_7</div></button>
+        <button class="available"><div>R3_8</div></button>
+        <button class="available"><div>R3_9</div></button>
+        <button class="available"><div>R3_10</div></button>
+        <button class="available"><div>R3_11</div></button>
+        <button class="available"><div>R3_12</div></button>
         <button class="available"><div>R3_13</div></button>
-        <button class="taken"><div>R3_14</div></button>
-        <button class="taken"><div>R3_15</div></button>
-        <button class="taken"><div>R3_16</div></button>
-        <button class="taken"><div>R3_17</div></button>
-        <button class="taken"><div>R3_18</div></button>
-        <button class="taken"><div>R3_19</div></button>
-        <button class="taken"><div>R3_20</div></button>
-        <button class="taken"><div>R3_21</div></button>
-        <button class="taken"><div>R3_22</div></button>
-        <button class="taken"><div>R3_23</div></button>
-        <button class="taken"><div>R3_24</div></button>
-        <button class="taken"><div>R3_25</div></button>
-        <button class="taken"><div>R3_26</div></button>
-        <button class="taken"><div>R3_27</div></button>
-        <button class="taken"><div>R3_28</div></button>
-        <button class="taken"><div>R3_29</div></button>
-        <button class="taken"><div>R3_30</div></button>
-        <button class="taken"><div>R3_31</div></button>
-        <button class="taken"><div>R3_32</div></button>
-        <button class="taken"><div>R3_33</div></button>
-        <button class="taken"><div>R3_34</div></button>
-        <button class="taken"><div>R3_35</div></button>
+        <button class="available"><div>R3_14</div></button>
+        <button class="available"><div>R3_15</div></button>
+        <button class="available"><div>R3_16</div></button>
+        <button class="available"><div>R3_17</div></button>
+        <button class="available"><div>R3_18</div></button>
+        <button class="available"><div>R3_19</div></button>
+        <button class="available"><div>R3_20</div></button>
+        <button class="available"><div>R3_21</div></button>
+        <button class="available"><div>R3_22</div></button>
+        <button class="available"><div>R3_23</div></button>
+        <button class="available"><div>R3_24</div></button>
+        <button class="available"><div>R3_25</div></button>
+        <button class="available"><div>R3_26</div></button>
+        <button class="available"><div>R3_27</div></button>
+        <button class="available"><div>R3_28</div></button>
+        <button class="available"><div>R3_29</div></button>
+        <button class="available"><div>R3_30</div></button>
+        <button class="available"><div>R3_31</div></button>
+        <button class="available"><div>R3_32</div></button>
+        <button class="available"><div>R3_33</div></button>
+        <button class="available"><div>R3_34</div></button>
+        <button class="available"><div>R3_35</div></button>
         <button class="available"><div>R3_36</div></button>
 
         <!-- ROW 2 -->
-        <button class="taken"><div>R2_1</div></button>
-        <button class="taken"><div>R2_2</div></button>
-        <button class="taken"><div>R2_3</div></button>
-        <button class="taken"><div>R2_4</div></button>
-        <button class="taken"><div>R2_5</div></button>
-        <button class="taken"><div>R2_6</div></button>
-        <button class="taken"><div>R2_7</div></button>
-        <button class="taken"><div>R2_8</div></button>
-        <button class="taken"><div>R2_9</div></button>
-        <button class="taken"><div>R2_10</div></button>
-        <button class="taken"><div>R2_11</div></button>
-        <button class="taken"><div>R2_12</div></button>
-        <button class="taken"><div>R2_13</div></button>
-        <button class="taken"><div>R2_14</div></button>
-        <button class="no_lapida"><div>R2_15</div></button>
-        <button class="taken"><div>R2_16</div></button>
-        <button class="taken"><div>R2_17</div></button>
-        <button class="taken"><div>R2_18</div></button>
-        <button class="taken"><div>R2_19</div></button>
-        <button class="taken"><div>R2_20</div></button>
-        <button class="taken"><div>R2_21</div></button>
-        <button class="taken"><div>R2_22</div></button>
-        <button class="taken"><div>R2_23</div></button>
-        <button class="taken"><div>R2_24</div></button>
-        <button class="taken"><div>R2_25</div></button>
-        <button class="taken"><div>R2_26</div></button>
-        <button class="taken"><div>R2_27</div></button>
-        <button class="taken"><div>R2_28</div></button>
-        <button class="taken"><div>R2_29</div></button>
-        <button class="taken"><div>R2_30</div></button>
-        <button class="taken"><div>R2_31</div></button>
-        <button class="taken"><div>R2_32</div></button>
-        <button class="taken"><div>R2_33</div></button>
-        <button class="taken"><div>R2_34</div></button>
-        <button class="taken"><div>R2_35</div></button>
-        <button class="taken"><div>R2_36</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R2_1</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R2_2</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R2_3</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R2_4</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R2_5</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R2_6</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R2_7</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R2_8</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R2_9</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R2_10</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R2_11</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R2_12</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R2_13</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R2_14</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R2_15</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R2_16</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R2_17</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R2_18</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R2_19</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R2_20</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R2_21</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R2_22</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R2_23</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R2_24</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R2_25</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R2_26</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R2_27</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R2_28</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R2_29</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R2_30</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R2_31</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R2_32</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R2_33</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R2_34</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R2_35</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R2_36</div></button>
 
         <!-- ROW 1 -->
-        <button class="taken"><div>R1_1</div></button>
-        <button class="taken"><div>R1_2</div></button>
-        <button class="taken"><div>R1_3</div></button>
-        <button class="taken"><div>R1_4</div></button>
-        <button class="taken"><div>R1_5</div></button>
-        <button class="taken"><div>R1_6</div></button>
-        <button class="taken"><div>R1_7</div></button>
-        <button class="taken"><div>R1_8</div></button>
-        <button class="taken"><div>R1_9</div></button>
-        <button class="taken"><div>R1_10</div></button>
-        <button class="taken"><div>R1_11</div></button>
-        <button class="taken"><div>R1_12</div></button>
-        <button class="taken"><div>R1_13</div></button>
-        <button class="taken"><div>R1_14</div></button>
-        <button class="taken"><div>R1_15</div></button>
-        <button class="taken"><div>R1_16</div></button>
-        <button class="taken"><div>R1_17</div></button>
-        <button class="taken"><div>R1_18</div></button>
-        <button class="taken"><div>R1_19</div></button>
-        <button class="taken"><div>R1_20</div></button>
-        <button class="taken"><div>R1_21</div></button>
-        <button class="taken"><div>R1_22</div></button>
-        <button class="taken"><div>R1_23</div></button>
-        <button class="taken"><div>R1_24</div></button>
-        <button class="taken"><div>R1_25</div></button>
-        <button class="taken"><div>R1_26</div></button>
-        <button class="taken"><div>R1_27</div></button>
-        <button class="taken"><div>R1_28</div></button>
-        <button class="taken"><div>R1_29</div></button>
-        <button class="taken"><div>R1_30</div></button>
-        <button class="taken"><div>R1_31</div></button>
-        <button class="taken"><div>R1_32</div></button>
-        <button class="taken"><div>R1_33</div></button>
-        <button class="taken"><div>R1_34</div></button>
-        <button class="taken"><div>R1_35</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R1_1</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R1_2</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R1_3</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R1_4</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R1_5</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R1_6</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R1_7</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R1_8</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R1_9</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R1_10</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R1_11</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R1_12</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R1_13</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R1_14</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R1_15</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R1_16</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R1_17</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R1_18</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R1_19</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R1_20</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R1_21</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R1_22</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R1_23</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R1_24</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R1_25</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R1_26</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R1_27</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R1_28</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R1_29</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R1_30</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R1_31</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R1_32</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R1_33</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R1_34</div></button>
+        <button class="available" data-toggle="modal" data-target="#detailModal"><div>R1_35</div></button>
         <button class="available" data-toggle="modal" data-target="#detailModal"><div>R1_36</div></button>
     </div>
 </div>

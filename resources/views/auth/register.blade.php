@@ -23,7 +23,9 @@
                     <h6 class="h2 mb-0"><i class="fa fa-user-plus mr-2" aria-hidden="true"></i> Register New User</h6>
                 </div>
                 <div class="card-body" style="padding:2rem;">
-                    <form method="" action="">
+                 <form method="POST" action="{{ route('register') }}">
+                        @csrf
+
                         <div class="row mb-3">
                             <label for="fname" class="col-md-3 col-form-label text-md-end"><i class="fa fa-user mr-2" aria-hidden="true"></i>First Name</label>
                             <div class="col">
