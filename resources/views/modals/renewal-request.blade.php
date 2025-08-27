@@ -7,9 +7,9 @@
         <input type="hidden" name="reservation_id">
         <input type="hidden" name="slot_id">
 
-        <div class="modal-header bg-danger">
-          <h5 class="modal-title text-white mb-0">
-            <img src="https://img.icons8.com/dusk/30/renew-subscription.png"/>
+        <div class="modal-header">
+          <h5 class="modal-title mb-0">
+            <img class="mr-2" src="https://img.icons8.com/dusk/30/renew-subscription.png"/>
             RENEWAL&nbsp;REQUEST
           </h5>
           <button type="button" class="close" data-dismiss="modal" aria-label="Close">

@@ -16,13 +16,17 @@ class Exhumation extends Model
         'contact',
         'address',
         'amount_as_per_ord',
+         'or_number',
+        'or_issued_at',
         'verifiers_id',
         'status',
         'remarks',
+
     ];
 
     protected $casts = [
         'date_applied' => 'date',
+         'or_issued_at' => 'date',
 
         'created_at'   => 'datetime',
         'updated_at'   => 'datetime',
@@ -44,7 +48,7 @@ class Exhumation extends Model
             $level = $cell->level;
             $site  = $level->apartment;
             return sprintf(
-                '%s • L%s R%s C%s S%s',
+                '%s • Level %s R%s C%s S%s',
                 $site?->name,
                 $level->level_no,
                 $cell->row_no,

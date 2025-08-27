@@ -6,6 +6,7 @@
             <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
             <meta name="description" content="Start your development with a Dashboard for Bootstrap 4.">
             <meta name="author" content="Creative Tim">
+            <meta name="csrf-token" content="{{ csrf_token() }}">
             <title>SJ CEMETERY SYSTEM</title>
             <!-- Favicon -->
             <link rel="icon" href="{{asset('assets/img/sjc.png')}}" type="image/png">
@@ -22,7 +23,7 @@
             <!-- Argon CSS -->
             <link rel="stylesheet" href="{{asset('assets/css/argon.css?v=1.1.0')}}" type="text/css">
 
-            <script src="{{asset('assets/js/jquery-3.3.1.min.js')}}"></script>
+            <!-- <script src="{{asset('assets/js/jquery-3.3.1.min.js')}}"></script> -->
             <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.3/jquery.min.js"></script>
 
             <style>
@@ -31,12 +32,12 @@
                     font-family: 'Poppins', sans-serif !important;
                     font-weight: 400;
                 }
-                /* .nav-link {
-                    color: white !important;
+                .modal-header{border-bottom: 1PX solid #e9ecef !important;}
+                 .form-control[readonly] {
+                    opacity: 1;
+                    color: #000000 !important;
+                    background-color: #e5e5e57a !important;
                 }
-                .nav-link:hover {
-                    color:#E8DACC !important;
-                } */
                 @media only screen and (max-width: 600px) {
                     .navbar-collapse.collapsing, .navbar-collapse.show {
                         padding: 1.5rem;
@@ -63,15 +64,11 @@
                         margin-bottom: .5rem;
                     }
                 }
-                .form-control:disabled, .form-control[readonly] {
-                    opacity: 1;
-                    color: #605b5b !important;
-                    background-color: #e5e5e5;
-                }
         </style>
         </head>
 
     <body>
+        @stack('scripts')
     <div class="main-content" id="panel">
         <!-- Header -->
         <nav class="navbar navbar-expand-lg bg-dark fix-top shadow" id="fixed-top" style="border-color: #A2A6B0 !important;">
@@ -113,7 +110,7 @@
                                 <div class="dropdown-header noti-title">
                                     <h6 class="text-overflow m-0">Welcome!</h6>
                                 </div>
-                                <a href="" class="dropdown-item">
+                                <a href="{{URL('/my_profile')}}" class="dropdown-item">
                                     <i class="ni ni-single-02"></i>
                                     <span>My profile</span>
                                 </a>
@@ -158,6 +155,7 @@
     <script src="{{asset('assets/vendor/datatables.net-buttons/js/buttons.flash.min.js')}}"></script>
     <script src="{{asset('assets/vendor/datatables.net-buttons/js/buttons.print.min.js')}}"></script>
     <script src="{{asset('assets/vendor/datatables.net-select/js/dataTables.select.min.js')}}"></script>
+
     <!-- Argon JS -->
     <script src="{{asset('assets/js/argon.js?v=1.1.0')}}"></script>
     <script type="text/javascript">
@@ -176,5 +174,8 @@
             });
         });
     </script>
+
+
+
     </body>
 </html>

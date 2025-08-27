@@ -2,148 +2,184 @@
 
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
+
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\BurialPermitController;
 use App\Http\Controllers\LevelController;
 use App\Http\Controllers\ExhumationPermitController;
-use App\Http\Controllers\ExhumationApprovalController;
-use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\LookupController;
 use App\Http\Controllers\RenewalPermitController;
-/*
-|--------------------------------------------------------------------------
-| Web Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register web routes for your application. These
-| routes are loaded by the RouteServiceProvider within a group which
-| contains the "web" middleware group. Now create something great!
-|
-*/
+use App\Http\Controllers\ReportViewController;
+use App\Http\Controllers\ReservationController;
+use App\Http\Controllers\ProfileController;
 
 
-Route::get('/', function () {
-    return view('auth.login');
-});
+Route::pattern('renewal', '[0-9]+');
+Route::pattern('exhumation', '[0-9]+');
+Route::pattern('cell', '[0-9]+');
+Route::pattern('slot', '[0-9]+');
+Route::pattern('id', '[0-9]+');
 
 
+Route::get('/', fn () => view('auth.login'));
 Auth::routes();
 
+Route::group(['middleware' => 'prevent-back-history'], function () {
 
-Route::group(['middleware' => 'prevent-back-history'],function(){
 
-    Route::get('Homepage', [HomeController::class,'homepage'])->name('Homepage');
+    Route::get('Homepage', [HomeController::class, 'homepage'])->name('Homepage');
 
-    //Burial Application
-    Route::get('burial_application_form', [BurialPermitController::class, 'burial_application_form'])->name('burial_application_form');
-    Route::get('/row_list/{id}', [BurialPermitController::class, 'row_list']);
-    Route::get('/col_list/{id}', [BurialPermitController::class, 'col_list']);
 
-    //EXHUMATION
-    Route::get('exhumation_application_form', [HomeController::class, 'exhumation_application_form'])->name('exhumation_application_form');
+    Route::get('/apply/burial', fn () => view('burial_applicant_gate'))->name('burial.apply.gate');
 
-    //CEMETERY ALL DATA
+    Route::get('burial_application_form', [BurialPermitController::class, 'burial_application_form'])
+        ->name('burial_application_form');
+
+
+    Route::get('exhumation_application_form', [HomeController::class, 'exhumation_application_form'])
+        ->name('exhumation_application_form');
+
+
     Route::get('cemetery_data', [HomeController::class,'cemetery_data'])->name('cemetery_data');
 
-    // LEVELS
+
     Route::get('/level/{levelNo}', [LevelController::class, 'show'])
-     ->whereNumber('levelNo')
-     ->name('level.show'); // dynamic levels
+        ->whereNumber('levelNo')->name('level.show');
+
+    Route::get('levels/{level}/grid', [LevelController::class, 'grid'])
+        ->whereNumber('level')->name('levels.grid');
 
 
-    //USERS
+    Route::get('levels/{level}/reserve', [BurialPermitController::class, 'createGrid'])
+        ->whereNumber('level')->name('levels.reserve');
+
+
+    Route::get('/reports', [ReportViewController::class, 'report']);
+
+
     Route::get('list_of_users', [HomeController::class,'list_of_users'])->name('list_of_users');
-    Route::get('/user_details/{id}', [HomeController::class, 'user_details']);
+    Route::get('/user_details/{id}', [HomeController::class, 'user_details'])->whereNumber('id');
     Route::post('/change_user_info', [HomeController::class, 'change_user_info']);
 
-    //PERMITS
-    Route::get('Generate_Burial_Permit', [ReportController::class,'Generate_Burial_Permit'])->name('Generate_Burial_Permit');
-    Route::get('Generate_Exhumation_Permit', [ReportController::class,'Generate_Exhumation_Permit'])->name('Generate_Exhumation_Permit');
-
-    //Reports
-    Route::get('Generate_report', [ReportController::class,'Generate_report'])->name('Generate_report');
-    Route::get('print_report', [ReportController::class,'print_report'])->name('print_report');
-
-    //test
-    Route::get('test', [HomeController::class,'test'])->name('test');
-    Route::get('/test_list_of_users', [App\Http\Controllers\HomeController::class, 'test_list_of_users']);
-    Route::post('/Test_edit_user', [App\Http\Controllers\HomeController::class, 'Test_edit_user']);
-    Route::post('/create', [App\Http\Controllers\RegisterController::class, 'create']);
-
-    //Burial Application Main Controllers
-    Route::get('/burialAppView',[BurialPermitController::class, 'burialAppView']);
+    Route::middleware(['auth'])->group(function () {
+        Route::put('/profile/update', [ProfileController::class, 'update'])->name('profile.update');
+    });
 
 
+    Route::post('/reservations', [BurialPermitController::class, 'store'])->name('reservations.store');
 
 
-    //for testing only to be finalized
+    Route::get('Generate_Burial_Permit',     [ReportController::class, 'Generate_Burial_Permit'])->name('Generate_Burial_Permit');
+    Route::get('Generate_Exhumation_Permit', [ReportController::class, 'Generate_Exhumation_Permit'])->name('Generate_Exhumation_Permit');
+    Route::get('Generate_Burial_Application_Permit', [ReportController::class, 'Generate_Burial_Application_Permit'])->name('Generate_Burial_Application_Permit');
+    Route::get('Generate_report',            [ReportController::class, 'Generate_report'])->name('Generate_report');
+    Route::get('print_report',               [ReportController::class, 'print_report'])->name('print_report');
 
 
-    Route::get ('/levels/{level}/reserve',
-    [App\Http\Controllers\BurialPermitController::class,'createGrid']
-)->whereNumber('level')->name('reservations.createGrid');
+    Route::get('test', [HomeController::class, 'test'])->name('test');
+    Route::get('/test_list_of_users', [HomeController::class, 'test_list_of_users']);
+    Route::post('/Test_edit_user',    [HomeController::class, 'Test_edit_user']);
+    Route::post('/create',            [App\Http\Controllers\RegisterController::class, 'create']);
+    Route::get('my_profile',          [HomeController::class,'my_profile'])->name('my_profile');
 
-Route::post('/reservations',
-    [App\Http\Controllers\BurialPermitController::class,'store']
-)->name('reservations.store');
-
-Route::get('/level/{levelNo}', [LevelController::class, 'show'])
-     ->whereNumber('levelNo')
-     ->name('level.show');
-
-     Route::get('levels/{level}/grid',
-    [LevelController::class, 'grid']
-)->name('levels.grid');
-
-      Route::get(
-        '/api/burial-sites/{site}/levels',
-        [BurialPermitController::class, 'levels']
-    )->name('api.levels.for-site');
+    Route::get('/api/burial-sites', [LookupController::class, 'index']);
+    Route::get('/api/burial-sites/{id}/levels', [LookupController::class, 'levels'])->whereNumber('id');
 
 
-    Route::post('exhumations', [ExhumationPermitController::class,'store'])
-     ->name('exhumations.store');
-
-     Route::get('exhumation_form', [ExhumationPermitController::class, 'exhumation_form']);
+    Route::get('/api/families/search', [LookupController::class, 'searchFamilies'])->name('api.families.search');
+    Route::post('/api/families',       [LookupController::class, 'storeFamily'])->name('api.families.store');
 
 
 
-Route::get('exhumations/requests',
-    [App\Http\Controllers\ExhumationPermitController::class, 'listRequests']
-)->name('exhumations.requests');
-
-Route::post('exhumations/{exhumation}/approve',
-    [ExhumationPermitController::class, 'approve']
-)->name('exhumations.approve');
-
-Route::post('exhumations/{exhumation}/deny',
-    [ExhumationPermitController::class, 'deny']
-)->name('exhumations.deny');
+Route::get('/api/families/search', [LookupController::class, 'searchFamilies'])->name('api.families.search');
+Route::post('/api/families',       [LookupController::class, 'storeFamily'])->name('api.families.store');
 
 
-/// renewals
+Route::get('/api/families/{family}', [LookupController::class, 'showFamily'])
+    ->whereNumber('family')
+    ->name('api.families.show');
 
-// Route::get('renewal-requests',
-//   [RenewalPermitController::class, 'index'])->name('renewals.index');
 
-// Route::resource('renewals', RenewalPermitController::class)
-//      ->only(['index','update']);
- Route::post('renewals',                    [RenewalPermitController::class,'store'])->name('renewals.store');
-// Route::post('renewals/{renewal}/approve',  [RenewalPermitController::class,'approve'])->name('renewals.approve');
-// Route::post('renewals/{renewal}/deny',     [RenewalPermitController::class,'deny'])->name('renewals.deny');
-
-Route::prefix('renewals')->name('renewals.')->group(function () {
-    Route::get('/',                [RenewalPermitController::class, 'index'])->name('index');
-    Route::get('/datatable',       [RenewalPermitController::class, 'datatable'])->name('datatable');
-
-    Route::post('/{renewal}/approve', [RenewalPermitController::class, 'approve'])->name('approve');
-    Route::post('/{renewal}/deny',    [RenewalPermitController::class, 'deny'])->name('deny');
+Route::put('/api/families/{family}',   [LookupController::class, 'updateFamily'])->whereNumber('family')->name('api.families.update');
+Route::patch('/api/families/{family}', [LookupController::class, 'updateFamily'])->whereNumber('family');
 
 
 
+    Route::post('exhumations', [ExhumationPermitController::class,'store'])->name('exhumations.store');
+    Route::get('exhumation_form', [ExhumationPermitController::class, 'exhumation_form'])->name('exhumation.form');
 
+
+    Route::get('exhumations/requests', [ExhumationPermitController::class, 'listRequests'])
+        ->name('exhumations.requests');
+
+    Route::post('exhumations/{exhumation}/approve', [ExhumationPermitController::class, 'approve'])
+        ->name('exhumations.approve')->whereNumber('exhumation');
+
+    Route::post('exhumations/{exhumation}/deny', [ExhumationPermitController::class, 'deny'])
+        ->name('exhumations.deny')->whereNumber('exhumation');
+
+    Route::post('exhumations/{exhumation}/approve-batch', [ExhumationPermitController::class, 'approveBatch'])
+        ->name('exhumations.approveBatch')->whereNumber('exhumation');
+
+        Route::get('exhumations/{exhumation}', [ExhumationPermitController::class, 'show'])
+    ->name('exhumations.show')->whereNumber('exhumation');
+
+
+Route::patch('exhumations/{exhumation}', [ExhumationPermitController::class, 'update'])
+    ->name('exhumations.update')->whereNumber('exhumation');
+
+
+
+    Route::post('renewals', [RenewalPermitController::class,'store'])->name('renewals.store');
+
+
+    Route::get('/renewals', [RenewalPermitController::class, 'index'])->name('renewals.index');
+
+
+    Route::get('/renewals/requests', [RenewalPermitController::class, 'index'])->name('renewals.requests');
+
+
+    Route::get('/renewals/datatable', [RenewalPermitController::class, 'datatable'])->name('renewals.datatable');
+
+
+    Route::post('/renewals/{renewal}/approve', [RenewalPermitController::class, 'approve'])
+        ->name('renewals.approve')->whereNumber('renewal');
+
+    Route::post('/renewals/{renewal}/deny', [RenewalPermitController::class, 'deny'])
+        ->name('renewals.deny')->whereNumber('renewal');
+
+    Route::post('/renewals/{renewal}/approve-batch', [RenewalPermitController::class, 'approveBatch'])
+        ->name('renewals.approveBatch')->whereNumber('renewal');
+
+    Route::get('/renewals/{renewal}',   [RenewalPermitController::class, 'show'])
+        ->name('renewals.show')->whereNumber('renewal');
+
+    Route::patch('/renewals/{renewal}', [RenewalPermitController::class, 'update'])
+        ->name('renewals.update')->whereNumber('renewal');
+
+    Route::get('/reservations/datatable', [ReservationController::class, 'datatable'])
+        ->name('reservations.datatable');
+
+    Route::get('/reservations/client-list', [ReservationController::class, 'list'])
+        ->name('reservations.client.list');
+
+    Route::get('/reservations/export', [ReservationController::class, 'export'])
+        ->name('reservations.export');
+
+
+    Route::get('/exhumations/{exhumation}/permit', [ReportController::class, 'exhumationPermit'])
+        ->name('exhumations.permit')->whereNumber('exhumation');
+
+    Route::get('/renewals/{renewal}/permit', [ReportController::class, 'generateRenewalPermit'])
+        ->name('renewals.permit')->whereNumber('renewal');
+
+    Route::get('/burials/{burial}/permit', [ReportController::class, ' generateBurialPermit'])
+        ->name('burial.permit')->whereNumber('burial');
+
+    Route::post('/cells/{cell}/slots', [\App\Http\Controllers\CellSlotController::class,'store'])
+        ->whereNumber('cell')->name('cells.slots.store');
+
+    Route::delete('/cells/{cell}/slots', [\App\Http\Controllers\CellSlotController::class, 'destroy'])
+        ->whereNumber('cell')->name('cells.slots.destroy');
 });
-});
-
-
-

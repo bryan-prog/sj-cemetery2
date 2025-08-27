@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
+use Illuminate\Auth\Events\Registered;
 
 class RegisterController extends Controller
 {
@@ -43,7 +44,7 @@ class RegisterController extends Controller
     protected function create(array $data)
     {
        return User::create([
-            'lname'     => $data['lname'],
+            'lname'  => $data['lname'],
             'fname' => $data['fname'],
             'mname' => $data['mname'],
             'suffix' => $data['suffix'],
@@ -56,10 +57,21 @@ class RegisterController extends Controller
 
         return $user;
 
-
-
         return Redirect::action('Auth/RegisterController@register')
             ->with('message', 'SUCCESSFULLY SAVED USER DATA!');
     }
+
+    public function register(Request $request)
+    {
+        $this->validator($request->all())->validate();
+
+         event(new Registered($user = $this->create($request->all())));
+
+         // Do NOT log the user in
+        // $this->guard()->login($user); ← REMOVE or COMMENT this line
+
+        return redirect($this->redirectPath())->with('message', 'SUCCESSFULLY SAVED USER DATA!');
+    }
+
 
 }

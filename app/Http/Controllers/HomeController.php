@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Exhumation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Response;
 use App\Models\User;
@@ -10,6 +11,15 @@ use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use Yajra\DataTables\DataTables;
 use App\Models\Graves;
+use App\Models\Renewal;
+use App\Models\Reservation;
+use App\Models\BurialSite;
+use App\Models\Slot;
+use App\Models\Level;
+
+
+
+
 
 
 class HomeController extends Controller
@@ -19,18 +29,74 @@ class HomeController extends Controller
         $this->middleware('auth');
     }
 
-    public function homepage()
-    {
-        return view('homepage');
+
+public function homepage()
+{
+    $reservationTotal  = Reservation::active()->count();
+    $renewalPending    = Renewal::whereRaw('LOWER(status) = ?', ['pending'])->count();
+    $exhumationPending = Exhumation::whereRaw('LOWER(status) = ?', ['pending'])->count();
+
+    $overallTotal = $reservationTotal + $renewalPending + $exhumationPending;
+
+    $renewals = Renewal::with([
+                    'slot.cell.level.apartment',
+                    'deceased',
+                ])
+                ->where('status', 'pending')
+                ->latest('id')
+                ->paginate(10);
+
+
+    $restos = BurialSite::where('name', 'Restos')
+                ->with('levels:id,burial_site_id,level_no')
+                ->first();
+
+
+    $levelProgress = collect(range(1, 7))->mapWithKeys(function ($lvl) {
+        return [$lvl => ['percent' => 0, 'busy' => 0, 'total' => 0, 'level_id' => null]];
+    })->toArray();
+
+    if ($restos) {
+        foreach ($restos->levels as $level) {
+
+            $busyStatuses = ['occupied', 'reserved', 'renewal_pending', 'exhumation_pending', 'for_penalty'];
+
+            $total = Slot::whereHas('cell', fn($q) => $q->where('level_id', $level->id))
+                         ->count();
+
+            $busy  = Slot::whereHas('cell', fn($q) => $q->where('level_id', $level->id))
+                         ->whereIn('status', $busyStatuses)
+                         ->count();
+
+            $levelProgress[$level->level_no] = [
+                'percent'  => $total ? (int) round(($busy / $total) * 100) : 0,
+                'busy'     => $busy,
+                'total'    => $total,
+                'level_id' => $level->id,
+            ];
+        }
     }
+
+    return view('homepage', compact(
+        'reservationTotal',
+        'renewalPending',
+        'exhumationPending',
+        'overallTotal',
+        'renewals',
+        'levelProgress'
+    ));
+}
 
 
 
     //CEMETERY ALL DATA
-    public function cemetery_data()
-    {
-        return view('cemetery_data');
-    }
+public function cemetery_data()
+{
+    $apartments = BurialSite::orderBy('name')->get(['id','name']);
+    return view('cemetery_data', compact('apartments'));
+}
+
+
 
 
     //USERS
@@ -91,6 +157,12 @@ class HomeController extends Controller
     {
         return view('test');
     }
+
+      public function my_profile()
+    {
+        return view('my_profile');
+    }
+
 
     public function test_list_of_users()
     {

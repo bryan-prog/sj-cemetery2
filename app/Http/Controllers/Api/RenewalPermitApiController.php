@@ -23,7 +23,7 @@ class RenewalPermitApiController extends Controller
 
 public function list_of_renewals(){
 
-    $renewals = Renewal::with(['slot'])->get();
+   $renewals = Renewal::all();
 
     return response()->json($renewals);
 
@@ -32,7 +32,7 @@ public function list_of_renewals(){
 public function list_of_reservations()
 {
 
-    $reservations = Reservation::with(['deceased'])->get();
+    $reservations = Reservation::all();
 
     return response()->json($reservations);
 }
@@ -62,7 +62,7 @@ public function list_of_exhumations(){
       public function listOfRenewals()
     {
         $renewals = Renewal::with([
-                'slot.cell.level.apartment',   // for buried_at
+                'slot.cell.level.apartment',
                 'reservation.deceased',
                 'verifier',
             ])
@@ -71,6 +71,10 @@ public function list_of_exhumations(){
 
         return RenewalResource::collection($renewals);
     }
+
+
+
+
 
 
 

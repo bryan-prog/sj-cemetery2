@@ -24,14 +24,17 @@ return new class extends Migration
     $table->foreignId('slot_id')->nullable()->constrained('slots')->cascadeOnDelete();
 
     $table->date('date_applied');
-    $table->string('applicant_name');
+    $table->string('applicant_first_name');
+    $table->string('applicant_middle_name')->nullable();
+    $table->string('applicant_last_name');
+    $table->string('applicant_suffix')->nullable();
     $table->string('applicant_address')->nullable();
     $table->string('applicant_contact_no')->nullable();
     $table->string('relationship_to_deceased')->nullable();
     $table->string('amount_as_per_ord')->nullable();
     $table->string('funeral_service')->nullable();
     $table->text('other_info')->nullable();
-    $table->dateTime('internment_sched');
+    $table->date('internment_sched');
 
     $table->timestamps();
 });

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
 
 class Reservation extends Model
 {
@@ -11,61 +12,39 @@ class Reservation extends Model
 
     protected $table = 'reservations';
 
+    protected $fillable = [
+        'level_id','deceased_id','grave_diggers_id','burial_site_id','verifiers_id',
+        'slot_id','date_applied',
 
-        protected $fillable = [
-        'level_id',
-        'deceased_id',
-        'grave_diggers_id',
-        'burial_site_id',
-        'verifiers_id',
-        'slot_id',
-        'date_applied',
-        'applicant_name',
-        'applicant_address',
-        'applicant_contact_no',
-        'relationship_to_deceased',
-        'amount_as_per_ord',
-        'funeral_service',
-        'renewal_date',
-        'other_info',
-        'internment_sched',
+
+        'applicant_first_name','applicant_middle_name','applicant_last_name','applicant_suffix',
+
+        'applicant_address','applicant_contact_no',
+        'relationship_to_deceased','amount_as_per_ord','funeral_service','renewal_date',
+        'other_info','internment_sched', 'family_id'
+    ];
+
+    protected $appends = ['renewal_start','renewal_end','buried_at','applicant_name'];
+
+    protected $casts = [
+        'date_applied'     => 'date',
+        'internment_sched' => 'date',
+        'renewal_date'     => 'date',
     ];
 
 
-    protected $appends = [
-    'renewal_start', 'renewal_end', 'buried_at',
-];
 
 
-    public function level()
-    {
-        return $this->belongsTo(Level::class, 'level_id');
-    }
+    public function level()         { return $this->belongsTo(Level::class, 'level_id'); }
+    public function burial_sites()  { return $this->belongsTo(BurialSite::class, 'burial_site_id'); }
+    public function burialSite()    { return $this->belongsTo(BurialSite::class, 'burial_site_id'); }
+    public function deceased()      { return $this->belongsTo(Deceased::class, 'deceased_id'); }
+    public function grave_diggers() { return $this->belongsTo(GraveDiggers::class, 'grave_diggers_id'); }
+    public function verifiers()     { return $this->belongsTo(Verifier::class, 'verifiers_id'); }
+    public function slot()          { return $this->belongsTo(Slot::class, 'slot_id'); }
+    public function family()        { return $this->belongsTo(Family::class); }
 
-    public function burial_sites(){
-         return $this->belongsTo(BurialSite::class, 'burial_site_id');
-
-    }
-      public function deceased()
-    {
-        return $this->belongsTo(Deceased::class, 'deceased_id');
-
-    }
-
-    public function grave_diggers(){
-        return $this->belongsTo(GraveDiggers::class, 'grave_diggers_id');
-    }
-
-    public function verifiers(){
-       return $this->belongsTo(Verifier::class, 'verifiers_id');
-    }
-
-     public function slot()
-    {
-        return $this->belongsTo(Slot::class, 'slot_id');
-    }
-
-       public function renewals()
+    public function renewals()
     {
         return $this->hasMany(Renewal::class)->oldest('renewal_start');
     }
@@ -73,27 +52,49 @@ class Reservation extends Model
     public function latestApprovedRenewal()
     {
         return $this->hasOne(Renewal::class)
-                    ->whereRaw('LOWER(status) = ?', ['approved'])
-                    ->latestOfMany();
+            ->whereRaw('LOWER(status) = ?', ['approved'])
+            ->latestOfMany();
     }
 
-    public function getRenewalStartAttribute()
-{
-    return optional($this->latestApprovedRenewal)->renewal_start;
+
+    public function getRenewalStartAttribute() { return optional($this->latestApprovedRenewal)->renewal_start; }
+    public function getRenewalEndAttribute()   { return optional($this->latestApprovedRenewal)->renewal_end; }
+    public function getBuriedAtAttribute()     { return optional($this->slot)->location_label; }
+
+
+    public function getApplicantNameAttribute(): string
+    {
+        $parts = array_filter([
+            $this->applicant_first_name,
+            $this->applicant_middle_name,
+            $this->applicant_last_name,
+            $this->applicant_suffix,
+        ], fn($v) => (string)$v !== '');
+        return trim(implode(' ', $parts));
+    }
+
+    public function exhumations() { return $this->hasMany(Exhumation::class); }
+
+
+    public function scopeActive($query)
+    {
+        return $query->whereDoesntHave('exhumations', function ($q) {
+            $q->whereRaw('LOWER(status) = ?', ['approved'])
+              ->whereNull('to_slot_id');
+        });
+    }
+
+    public function scopeForSiteLevelByName(Builder $query, string $siteName, int $levelNo): Builder
+    {
+        return $query
+            ->whereHas('burialSite', fn ($q) => $q->where('name', $siteName))
+            ->whereHas('level', fn ($q) => $q->where('level_no', $levelNo));
+    }
+
+    public function scopeForSiteLevel(Builder $query, int $burialSiteId, int $levelNo): Builder
+    {
+        return $query
+            ->where('burial_site_id', $burialSiteId)
+            ->whereHas('level', fn ($q) => $q->where('level_no', $levelNo));
+    }
 }
-
-public function getRenewalEndAttribute()
-{
-    return optional($this->latestApprovedRenewal)->renewal_end;
-}
-
-public function getBuriedAtAttribute()
-{
-    return optional($this->slot)->location_label;
-}
-
-}
-
-
-
-

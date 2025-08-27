@@ -34,8 +34,9 @@ Route::post('/register', [RegisterApiController::class, 'register']);
 
 
 Route::middleware('auth:sanctum')->group(function () {
-Route::get('/reservations-list', [RenewalPermitApiController::class, 'index']);
-Route::get('/renewals-list', [RenewalPermitApiController::class, 'listOfRenewals']);
+Route::get('/exhumations-list', [RenewalPermitApiController::class, 'list_of_exhumations']);
+Route::get('/renewals-list', [RenewalPermitApiController::class, 'list_of_renewals']);
+Route::get('/reservations-list', [RenewalPermitApiController::class, 'list_of_reserved']);
 
 
 

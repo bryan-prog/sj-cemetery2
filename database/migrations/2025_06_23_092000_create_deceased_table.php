@@ -15,7 +15,10 @@ return new class extends Migration
     {
         Schema::create('deceased', function (Blueprint $table) {
             $table->id();
-            $table->string('name_of_deceased');
+            $table->string('first_name');
+            $table->string('middle_name')->nullable();
+            $table->string('last_name');
+            $table->string('suffix')->nullable();
             $table->string('address_before_death');
             $table->string('sex');
             $table->date('date_of_birth');
