@@ -11,13 +11,10 @@ class Family extends Model
         'contact_person', 'contact_no', 'address',
     ];
 
-    // Make "name" show up in JSON automatically (computed, not a column)
+
     protected $appends = ['name'];
 
-    /**
-     * Computed family "name" for legacy UI:
-     * e.g., "CRUZ FAMILY" derived from last_name.
-     */
+
     public function getNameAttribute(): string
     {
         $last = strtoupper(trim((string)$this->last_name));

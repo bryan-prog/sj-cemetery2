@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\Validator;
 use App\Models\BurialSite;
 use Illuminate\Support\Str;
 
+
+
 class ReservationController extends Controller
 {
 
@@ -43,6 +45,7 @@ class ReservationController extends Controller
                 $e   = $r->renewal_end;
 
                 return [
+
                     'buried_at'      => $r->buried_at,
                     'name_of_deceased'  => optional($r->deceased)->name_of_deceased,
                     'sex'            => optional($r->deceased)->sex,

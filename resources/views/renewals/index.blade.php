@@ -126,6 +126,8 @@
                 <th class="text-white">Renewal&nbsp;Period</th>
                 <th class="text-white">Status</th>
                 @if($showValidityCol)
+
+                  <th class="text-white">OR&nbsp;No.</th>
                   <th class="text-white">Validity</th>
                 @endif
                 <th class="text-white text-end">Actions</th>
@@ -196,6 +198,8 @@
                 <td><span class="badge {{ $badge }}">{{ $statusLabel }}</span></td>
 
                 @if($showValidityCol)
+
+                  <td>{{ ($rawStatus === 'approved') ? ($r->or_number ?? '—') : '—' }}</td>
                   <td>
                     @if($validityText !== '')
                       <span class="{{ $validityClass }}">{{ $validityText }}</span>
@@ -207,7 +211,6 @@
                   <a href="{{ url('/renewals/'.$r->id.'/permit') }}" target="_blank" class="btn btn-sm btn-primary" title="Print Permit">
                     <i class="fa fa-print" aria-hidden="true"></i>
                   </a>
-
 
                   <button type="button"
                           class="btn btn-sm btn-info edit-renewal-btn"
@@ -332,7 +335,6 @@
         <div class="modal-body">
           <div class="alert alert-danger d-none" id="editRenewalErrors"></div>
 
-
           <div class="form-row">
             <div class="form-group col-md-6">
               <label class="form-control-label"><img src="https://img.icons8.com/doodle/20/test-account.png"> Applicant's Name</label>
@@ -452,6 +454,7 @@ $(function () {
       pagingType   : 'full_numbers',
       order        : [[5, 'desc']],
       language     : { paginate: { next:'>', previous:'<', first:'<<', last:'>>' } },
+
       columnDefs   : (window.SHOW_VALIDITY
                       ? [{ orderable:false, targets:[-1, -2] }]
                       : [{ orderable:false, targets:[-1] }])
@@ -463,25 +466,21 @@ $(function () {
       .attr('placeholder', 'Search...');
   }
 
-
   $('#renewalsTable tbody').on('click', 'tr', function (e) {
     if ($(e.target).closest('a,button,input,select,textarea,label').length) return;
     if (table) table.$('tr.table-active').removeClass('table-active');
     $(this).addClass('table-active');
   });
 
-
   $(document).on('click', '.approve-btn', function () {
     $('#approveForm').attr('action', $(this).data('action'));
     $('#approveForm')[0]?.reset();
   });
 
-
   $(document).on('click', '.approve-batch-btn', function () {
     $('#approveBatchForm').attr('action', $(this).data('batch-action'));
     $('#approveBatchForm')[0]?.reset();
   });
-
 
   var $currentRow = null;
   var currentId   = null;
@@ -499,7 +498,6 @@ $(function () {
       $editSave.text('Save changes').attr('data-mode', 'save').removeClass('btn-danger').addClass('btn-success');
     }
   }
-
 
   $(document).on('click', '.edit-renewal-btn', function (e) {
     e.preventDefault();
@@ -536,7 +534,6 @@ $(function () {
     });
   });
 
-
   $('#erEditSaveBtn').on('click', function() {
     var mode = $(this).attr('data-mode');
     if (mode === 'view') {
@@ -546,7 +543,6 @@ $(function () {
       $('#editRenewalForm').trigger('submit');
     }
   });
-
 
   $('#erCancelBtn').on('click', function () {
     var mode = $('#erEditSaveBtn').attr('data-mode');
@@ -565,7 +561,6 @@ $(function () {
       $('#editRenewalModal').modal('hide');
     }
   });
-
 
   $('#editRenewalForm').on('submit', function (e) {
     e.preventDefault();
@@ -593,9 +588,11 @@ $(function () {
         }
 
         if (resp.payload && resp.payload.buried_at) {
+
           $currentRow.find('td').eq(4).text(resp.payload.buried_at);
           $('[name=dec_buried_at]').val(resp.payload.buried_at);
         }
+
 
         $currentRow.find('td').eq(5).text(periodText);
 

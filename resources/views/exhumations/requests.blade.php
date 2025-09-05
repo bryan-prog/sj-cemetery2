@@ -57,6 +57,7 @@
       @php
         $exhumations->loadMissing('fromSlot.cell.level.apartment', 'toSlot.cell.level.apartment', 'reservation.deceased');
         $status = $status ?? request('status','pending');
+        $showORCol = ($status !== 'pending');
 
         $cellCounts = [];
         $cellLabels = [];
@@ -106,6 +107,9 @@
                 <th class="text-white">Name&nbsp;of&nbsp;Deceased</th>
                 <th class="text-white">Date&nbsp;of&nbsp;Death</th>
                 <th class="text-white">For&nbsp;Transfer</th>
+                @if($showORCol)
+                  <th class="text-white">OR&nbsp;No.</th>
+                @endif
                 <th class="text-white">Status</th>
                 <th class="text-white text-end">Actions</th>
               </tr>
@@ -148,6 +152,12 @@
                 <td>{{ $dec?->name_of_deceased ?? '—' }}</td>
                 <td>{{ $dod }}</td>
                 <td>{{ $forTransfer }}</td>
+
+                @if($showORCol)
+                  <td>
+                    {{ in_array($ex->status, ['approved','exhumed'], true) ? ($ex->or_number ?? '—') : '—' }}
+                  </td>
+                @endif
 
                 <td><span class="badge {{ $badge }}">{{ $statusText }}</span></td>
 
@@ -469,7 +479,6 @@ $(function () {
     }
   }
 
-
   $(document).on('click', '.edit-exh-btn', function (e) {
     e.preventDefault();
     e.stopPropagation();
@@ -482,13 +491,11 @@ $(function () {
     $('#editExhForm')[0].reset();
     setViewMode(true);
 
-
     $('[name=dec_name]').val('Loading…');
     $('[name=dec_dod]').val('');
     $('[name=from_label]').val('');
 
     $('#editExhModal').modal('show');
-
 
     $('#editExhForm').attr('action', EXH_UPDATE_URL_TPL.replace('__ID__', currentId));
 
@@ -522,7 +529,6 @@ $(function () {
       });
   });
 
-
   $('#exEditSaveBtn').on('click', function() {
     var mode = $(this).attr('data-mode');
     if (mode === 'view') {
@@ -532,7 +538,6 @@ $(function () {
       $('#editExhForm').trigger('submit');
     }
   });
-
 
   $('#exCancelBtn').on('click', function () {
     var mode = $('#exEditSaveBtn').attr('data-mode');
@@ -550,7 +555,6 @@ $(function () {
       $('#editExhModal').modal('hide');
     }
   });
-
 
   $('#editExhForm').on('submit', function (e) {
     e.preventDefault();
@@ -576,7 +580,6 @@ $(function () {
 
         if (table) table.row($currentRow).invalidate().draw(false);
 
-
         loadedData = $.extend({}, loadedData, {
           requesting_party: $('[name=requesting_party]').val(),
           address: $('[name=address]').val(),
@@ -586,7 +589,6 @@ $(function () {
           date_applied: $('[name=date_applied]').val(),
           current_location: $('[name=current_location]').val()
         });
-
 
         $('#editExhModal').one('hidden.bs.modal', function () {
           $('#saveSuccessText').text(resp.message || 'Saved successfully!');

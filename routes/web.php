@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Auth\RegisterController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -13,6 +14,10 @@ use App\Http\Controllers\RenewalPermitController;
 use App\Http\Controllers\ReportViewController;
 use App\Http\Controllers\ReservationController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ReservationBrowserController;
+
+
+
 
 
 Route::pattern('renewal', '[0-9]+');
@@ -20,6 +25,7 @@ Route::pattern('exhumation', '[0-9]+');
 Route::pattern('cell', '[0-9]+');
 Route::pattern('slot', '[0-9]+');
 Route::pattern('id', '[0-9]+');
+Route::pattern('reservation', '[0-9]+');
 
 
 Route::get('/', fn () => view('auth.login'));
@@ -55,7 +61,7 @@ Route::group(['middleware' => 'prevent-back-history'], function () {
         ->whereNumber('level')->name('levels.reserve');
 
 
-    Route::get('/reports', [ReportViewController::class, 'report']);
+    // Route::get('/reports', [ReportViewController::class, 'report']);
 
 
     Route::get('list_of_users', [HomeController::class,'list_of_users'])->name('list_of_users');
@@ -99,6 +105,9 @@ Route::post('/api/families',       [LookupController::class, 'storeFamily'])->na
 Route::get('/api/families/{family}', [LookupController::class, 'showFamily'])
     ->whereNumber('family')
     ->name('api.families.show');
+
+    Route::get('/api/levels/{level}/slots-progress', [LookupController::class, 'levelSlotsProgress'])
+    ->whereNumber('level');
 
 
 Route::put('/api/families/{family}',   [LookupController::class, 'updateFamily'])->whereNumber('family')->name('api.families.update');
@@ -168,14 +177,29 @@ Route::patch('exhumations/{exhumation}', [ExhumationPermitController::class, 'up
         ->name('reservations.export');
 
 
+
+
     Route::get('/exhumations/{exhumation}/permit', [ReportController::class, 'exhumationPermit'])
         ->name('exhumations.permit')->whereNumber('exhumation');
 
     Route::get('/renewals/{renewal}/permit', [ReportController::class, 'generateRenewalPermit'])
         ->name('renewals.permit')->whereNumber('renewal');
 
-    Route::get('/burials/{burial}/permit', [ReportController::class, ' generateBurialPermit'])
-        ->name('burial.permit')->whereNumber('burial');
+Route::get('/reservations', [\App\Http\Controllers\ReservationBrowserController::class, 'index'])->name('reservations.index');
+Route::get('/reservations/list', [\App\Http\Controllers\ReservationBrowserController::class, 'list'])->name('reservations.list');
+
+
+Route::get('/reservations/{reservation}/permit.pdf', [ReportController::class, 'burialApplication'])
+    ->name('reservations.permit.pdf')
+    ->whereNumber('reservation');
+    Route::get('/reservations/{reservation}/json', [ReservationBrowserController::class, 'show'])
+    ->whereNumber('reservation')
+    ->name('reservations.show');
+
+   Route::put('/reservations/{reservation}', [ReservationBrowserController::class, 'update'])->name('reservations.update');
+
+
+
 
     Route::post('/cells/{cell}/slots', [\App\Http\Controllers\CellSlotController::class,'store'])
         ->whereNumber('cell')->name('cells.slots.store');

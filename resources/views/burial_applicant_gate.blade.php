@@ -3,7 +3,7 @@
 <style>
   body{background-color: #797979 !important;}
   .container.mt-6 { max-width: 1265px !important; }
-  .form-control, .form-control-label { color:black !important; text-transform:uppercase; }
+  .form-control, .form-control-label { color:black !important; text-transform:none; }
   .card-header h3 { margin: 0; }
   .search-results { max-height: 320px; overflow-y: auto; }
   .table thead th { background:#f3f4f6; }

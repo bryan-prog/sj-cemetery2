@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\BurialSite;
 use App\Models\Level;
 use Illuminate\Http\Request;
-use App\Models\{Family, Reservation};
+use App\Models\{Family, Reservation, Slot};
 
 class LookupController extends Controller
 {
@@ -20,6 +20,23 @@ class LookupController extends Controller
             ->orderBy('level_no')
             ->get(['id','level_no']);
     }
+
+    public function levelSlotsProgress(Level $level)
+{
+    $busyStatuses = ['occupied','reserved','renewal_pending','exhumation_pending','for_penalty'];
+
+    $total = Slot::whereHas('cell', fn($q) => $q->where('level_id', $level->id))->count();
+
+    $busy  = Slot::whereHas('cell', fn($q) => $q->where('level_id', $level->id))
+                 ->whereIn('status', $busyStatuses)
+                 ->count();
+
+    return response()->json([
+        'total'   => $total,
+        'busy'    => $busy,
+        'percent' => $total ? round(($busy / $total) * 100) : 0,
+    ]);
+}
 
 
     public function searchFamilies(Request $request)

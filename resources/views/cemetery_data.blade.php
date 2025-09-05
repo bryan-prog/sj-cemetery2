@@ -71,7 +71,7 @@
                 <th class="text-white">Date of Death</th>
                 <th class="text-white">Year of Renewal</th>
                 <th class="text-white">Contact Person</th>
-                <th class="text-white">Action</th>
+
               </tr>
             </thead>
             <tbody></tbody>
@@ -133,10 +133,8 @@ $(function () {
       { data: 'date_of_birth',  defaultContent: '—' },
       { data: 'date_of_death',  defaultContent: '—' },
       { data: 'renewal_period', defaultContent: '—' },
-      { data: 'contact_person', defaultContent: '—' }, 
-      { data: 'id',      render: function(data, type, row) {
-    return `<a href="/burial-permit/${data}" target="_blank" class="btn btn-sm btn-primary" title="Print Burial Permit"><i class="fa fa-print"></i></a>`;}
-  }
+      { data: 'contact_person', defaultContent: '—' },
+
     ],
     language: { paginate: { next: '>', previous: '<', first: '<<', last: '>>' } },
     pagingType: 'full_numbers'

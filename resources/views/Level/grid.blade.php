@@ -6,8 +6,21 @@ $matrix = [];
 foreach ($level->cells as $cell) {
     $matrix[$cell->row_no][$cell->col_no] = $cell;
 }
-$rows = max(array_keys($matrix));
-$cols = max(array_map(fn ($r) => max(array_keys($r)), $matrix));
+
+/**
+ * $rows       = highest row number that has any cell
+ * $colsPerRow = [row_no => highest col number for that row]
+ * $maxCols    = maximum columns across all rows (used by header)
+ */
+$rows = !empty($matrix) ? max(array_keys($matrix)) : 0;
+
+$colsPerRow = [];
+$maxCols = 0;
+foreach ($matrix as $r => $colsArr) {
+    $rowMax = !empty($colsArr) ? max(array_keys($colsArr)) : 0;
+    $colsPerRow[$r] = $rowMax;
+    if ($rowMax > $maxCols) $maxCols = $rowMax;
+}
 
 $activeFamilyId = request()->has('family_id') && request('family_id') !== ''
     ? (int) request('family_id')
@@ -180,7 +193,7 @@ if (! function_exists('slotClass')) {
             <thead>
               <tr>
                 <th class="grid-head">R\C</th>
-                @for($c=1;$c<=$cols;$c++)
+                @for($c=1;$c<=$maxCols;$c++)
                   <th class="grid-head">{{ $c }}</th>
                 @endfor
               </tr>
@@ -189,8 +202,10 @@ if (! function_exists('slotClass')) {
               @for($r=1;$r<=$rows;$r++)
                 <tr>
                   <th class="grid-head">{{ $r }}</th>
-                  @for($c=1;$c<=$cols;$c++)
-                    @php $cell = $matrix[$r][$c] ?? null; @endphp
+                  @for($c=1;$c<=$maxCols;$c++)
+                    @php
+                      $cell = ($colsPerRow[$r] ?? 0) >= $c ? ($matrix[$r][$c] ?? null) : null;
+                    @endphp
                     <td style="padding:4px;">
                       @if($cell)
                         @php
