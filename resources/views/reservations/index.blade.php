@@ -36,19 +36,19 @@
         <div class="col">
           <p style="color:black; margin-bottom: 1.5px;">
             <b><img src="https://img.icons8.com/doodle/20/building--v1.png"/> Property Type :</b>
-            <span>Public</span>
+            <span id="propTypeText">Public</span>
           </p>
           <p style="color:black; margin-bottom: 1.5px;">
             <b><img src="https://img.icons8.com/doodle/20/apartment.png"/> Building Type :</b>
-            <span>Restos</span>
+            <span id="bldgTypeText">—</span>
           </p>
           <p style="color:black; margin-bottom: 1.5px;">
             <b><img src="https://img.icons8.com/doodle/20/marker--v1.png"/> Location :</b>
-            <span>Left Side</span>
+            <span id="locationText">—</span>
           </p>
           <p style="color:black; margin-bottom: 1.5px;">
             <b><img src="https://img.icons8.com/color/21/headstone--v1.png"/> Burial Type :</b>
-            <span>Bones/Urn</span>
+            <span id="burialTypeText">—</span>
           </p>
         </div>
 
@@ -297,12 +297,57 @@
     const $btnFilter = $('#btnFilter');
     const $btnExport = $('#btnExport');
 
+
+    const $bldgType   = $('#bldgTypeText');
+    const $location   = $('#locationText');
+    const $burialType = $('#burialTypeText');
+
     const BASE_LEVELS_URL = @json(url('/api/burial-sites'));
     const LIST_URL        = @json(route('reservations.list'));
     const EXPORT_URL      = @json(route('reservations.export'));
     const SHOW_URL_TPL    = @json(route('reservations.show', ['reservation' => '__ID__']));
     const UPDATE_URL_TPL  = @json(route('reservations.update', ['reservation' => '__ID__']));
     const PERMIT_URL_TPL  = @json(route('reservations.permit.pdf', ['reservation' => '__ID__']));
+
+
+    function inferSide(nameRaw) {
+      const name = String(nameRaw || '').toLowerCase();
+      if (name.includes('left side'))  return 'Left Side';
+      if (name.includes('right side')) return 'Right Side';
+      return '—';
+    }
+
+
+    function burialTypeFor(nameRaw) {
+      const n = String(nameRaw || '').toLowerCase().replace(/\s+/g, ' ').trim();
+
+
+      if (/left side.*restos/.test(n)) return 'Bones/Urn';
+
+      if (/left side.*apartment\s*(2|ii)\b/.test(n)) return '—';
+      if (/left side.*apartment\s*(3|iii)\b/.test(n)) return 'Bones/Urn/Whole Casket';
+      if (/left side.*apartment\s*(4|iv)\b/.test(n)) return 'Whole Casket';
+      if (/left side.*veterans/.test(n))            return 'Whole Casket';
+      if (/left side.*entrance/.test(n))            return 'Bones/Urn/Whole Casket';
+
+
+      if (/right side.*apartment\s*(1-a|i-a)\b/.test(n)) return '—';
+      if (/right side.*apartment\s*(1-b|i-b)\b/.test(n)) return '—';
+      if (/right side.*apartment\s*5\b/.test(n))         return 'Bones/Urn/Whole Casket';
+      if (/right side.*entrance/.test(n))                return 'Bones/Urn/Whole Casket';
+
+
+      return '—';
+    }
+
+
+    function syncHeaderFromSelectedSite() {
+      const $opt = $site.find('option:selected');
+      const name = $opt.val() ? $opt.text() : '';
+      $bldgType.text(name || '—');
+      $location.text(inferSide(name));
+      $burialType.text(burialTypeFor(name));
+    }
 
     function yearsNumberSince(dateStr) {
       if (!dateStr) return '—';
@@ -393,6 +438,10 @@
     }
 
     $site.on('change', function() {
+
+      syncHeaderFromSelectedSite();
+
+
       const siteId = $(this).val();
       resetLevels();
       if (!siteId) return;
@@ -585,10 +634,10 @@
         fillModal(r);
         setEditMode(false);
 
-        $modal.one('hidden.bs.modal', function() {
+        $('#reservationViewModal').one('hidden.bs.modal', function() {
           $('#updateSuccessModal').modal('show');
         });
-        $modal.modal('hide');
+        $('#reservationViewModal').modal('hide');
       })
       .fail(function (xhr) {
         console.error('Update failed', xhr.status, xhr.responseText);
@@ -606,6 +655,8 @@
       });
     });
 
+
+    syncHeaderFromSelectedSite();
   })();
 </script>
 @endsection

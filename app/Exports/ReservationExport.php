@@ -63,7 +63,11 @@ class ReservationExport implements FromView, WithEvents
                     'contact1' => $r->applicant_name,
                     'contact2' => '',
                 ];
-            });
+                
+            })
+               ->sortBy('col_no') 
+               ->sortBy('row_no') 
+                    ->values(); 
 
 
         $firstRowNo = $rows->pluck('row_no')->filter()->min() ?: 1;
@@ -141,6 +145,15 @@ class ReservationExport implements FromView, WithEvents
                $last = $s->getHighestRow();
                $style = $s->getStyle("A5:K{$last}");
                $style->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+                
+               $startRow = 6;
+               $lastRow = $s->getHighestRow();
+            for ($row = $startRow; $row <= $lastRow; $row++) 
+                {
+                    $s->mergeCells("C{$row}:E{$row}");
+                }        
+
+            
             }
         ];
     }

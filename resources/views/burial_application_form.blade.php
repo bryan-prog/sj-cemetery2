@@ -142,10 +142,10 @@
       <input type="checkbox" id="sameAddressToggle">
       Same Address
     </label>
-    <label class="mb-0 d-flex align-items-center inline-toggle">
+    {{-- <label class="mb-0 d-flex align-items-center inline-toggle">
       <input type="checkbox" id="noLapidaToggle">
       No Lapida
-    </label>
+    </label> --}}
   </div>
 </h4>
 

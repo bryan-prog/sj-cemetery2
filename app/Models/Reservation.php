@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
+use App\Support\CellRenewalSync;
 
 class Reservation extends Model
 {
@@ -18,7 +19,7 @@ class Reservation extends Model
         'applicant_first_name','applicant_middle_name','applicant_last_name','applicant_suffix',
         'applicant_address','applicant_contact_no',
         'relationship_to_deceased','amount_as_per_ord','funeral_service','renewal_date',
-        'other_info','internment_sched', 'family_id'
+        'other_info','internment_sched','family_id'
     ];
 
     protected $appends = [
@@ -31,6 +32,31 @@ class Reservation extends Model
         'internment_sched' => 'datetime',
         'renewal_date'     => 'date',
     ];
+
+
+    protected static function booted()
+    {
+
+        static::created(function (Reservation $reservation) {
+            if ($reservation->slot_id) {
+                app(CellRenewalSync::class)->syncForReservation($reservation);
+            }
+        });
+
+
+        static::updated(function (Reservation $reservation) {
+            if ($reservation->wasChanged('slot_id')) {
+                $original = $reservation->getOriginal('slot_id');
+                $current  = $reservation->slot_id;
+
+
+                if (empty($original) && !empty($current)) {
+                    app(CellRenewalSync::class)->syncForReservation($reservation);
+                }
+            }
+        });
+    }
+
 
     public function level()         { return $this->belongsTo(Level::class, 'level_id'); }
     public function burial_sites()  { return $this->belongsTo(BurialSite::class, 'burial_site_id'); }
@@ -52,6 +78,7 @@ class Reservation extends Model
             ->whereRaw('LOWER(status) = ?', ['approved'])
             ->latestOfMany();
     }
+
 
     public function getRenewalStartAttribute() { return optional($this->latestApprovedRenewal)->renewal_start; }
     public function getRenewalEndAttribute()   { return optional($this->latestApprovedRenewal)->renewal_end; }
@@ -83,8 +110,6 @@ class Reservation extends Model
         return $query
             ->whereHas('burialSite', fn ($q) => $q->where('name', $siteName))
             ->whereHas('level', fn ($q) => $q->where('level_no', $levelNo));
-
-
     }
 
     public function scopeForSiteLevel(Builder $query, int $burialSiteId, int $levelNo): Builder
@@ -94,7 +119,6 @@ class Reservation extends Model
             ->whereHas('level', fn ($q) => $q->where('level_no', $levelNo));
     }
 
-    // --------- NEW computed labels ---------
 
     public function getAptLevelLabelAttribute(): ?string
     {
@@ -113,7 +137,6 @@ class Reservation extends Model
 
     public function getLocationOrAptLevelAttribute(): ?string
     {
-        // Prefer precise slot label if your Slot model exposes 'location_label'
         return $this->slot?->location_label
             ?: $this->apt_level_label
             ?: ($this->burialSite?->name);

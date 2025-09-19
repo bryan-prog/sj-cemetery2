@@ -193,6 +193,9 @@ public function cemetery_data()
         return back()->with('message', 'Successfully updated user information!');
     }
 
-
+    public function logs()
+    {
+        return view('logs');
+    }
 
 }

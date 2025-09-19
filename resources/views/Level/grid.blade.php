@@ -7,11 +7,6 @@ foreach ($level->cells as $cell) {
     $matrix[$cell->row_no][$cell->col_no] = $cell;
 }
 
-/**
- * $rows       = highest row number that has any cell
- * $colsPerRow = [row_no => highest col number for that row]
- * $maxCols    = maximum columns across all rows (used by header)
- */
 $rows = !empty($matrix) ? max(array_keys($matrix)) : 0;
 
 $colsPerRow = [];
@@ -33,6 +28,7 @@ if (! function_exists('slotClass')) {
             'occupied'              => 'slot-occupied',
             'reserved'              => 'slot-family-reserved',
             'exhumed'               => 'slot-exhumed',
+            'for_renewal'           => 'slot-for-renewal',
             'renewal_pending'       => 'slot-renewal-pending',
             'exhumation_pending'    => 'slot-exhumation-pending',
             'for_penalty'           => 'slot-penalty',
@@ -45,27 +41,50 @@ if (! function_exists('slotClass')) {
 <style>
   .container.mt-3              { max-width: 1830px !important }
   .form-control,
-  .form-control-label           { color:black!important;text-transform:uppercase }
+  .form-control-label           { color:black!important;text-transform:none }
   th,td                         { border-color:black!important }
   .grid-head                    { background:#39597b!important }
   th.grid-head                  { color:#fff!important }
   .card .table th               { padding:0 2px!important }
-  .slot-box                     { margin-top:5px;width:32px;height:32px;border-radius:4px;
-                                  display:flex;align-items:center;justify-content:center;
-                                  font-size:12px;cursor:pointer;pointer-events:auto;
-                                  position:relative;z-index:2 }
-  .slot-available               { background:#c6f6d5;color: black;font-weight: 500;}
-  .slot-occupied                { background: #6495ED;cursor:help;color: white;font-weight: 600;}
-  .slot-exhumed                 { background: #c6f6d5;cursor:help;color: white;font-weight: 600; }
-  .slot-renewal-pending         { background: #8b5cf6; cursor:help;color: white;font-weight: 600; }
-  .slot-exhumation-pending      { background: #fbd38d;cursor:help;color: white;font-weight: 600; }
+
+
+  .slot-box {
+    margin-top:5px;
+    width:32px;
+    height:50px;
+    border-radius: 8px 8px 4px 4px;
+    position: relative;
+    display:flex;align-items:center;justify-content:center;
+    font-size:12px;cursor:pointer;pointer-events:auto;
+    z-index:2;
+    transition: transform .08s ease, filter .12s ease, box-shadow .12s ease, background-color .12s ease;
+  }
+
+  .slot-box::before {
+    content: '';
+    position: absolute;
+    top: 3px; left: 6px; right: 6px;
+    height: 3px;
+    border-radius: 2px;
+    opacity: .35;
+    background: currentColor;
+    pointer-events: none;
+  }
+
+
+  .slot-available               { background:#c0c0c0; color:#111; font-weight:600; }
+  .slot-family-reserved         { background:#2c3227; color:#ffffff; font-weight:700; }
+
+  .slot-occupied                { background:#800000; color:#fff; font-weight:600; }
+  .slot-exhumed                 { background:#c6f6d5; color:#22543d; font-weight:600; }
+  .slot-renewal-pending         { background:#545AA7; color:#fff; font-weight:600; }
+  .slot-for-renewal             { background:#AFDBF5; color:#0b0f12; font-weight:700; }
+  .slot-exhumation-pending      { background:#fbd38d; color:#7b341e; font-weight:600; }
+  .slot-penalty                 { background:#f87171; color:#fff; font-weight:600; }
+
   .slot-group                   { display:flex;flex-direction:column;align-items:center;gap:0 }
   .legend-box                   { width:18px;height:18px;border-radius:4px;display:inline-block }
-  .slot-penalty                 { background: #f87171; cursor:help;color: white;font-weight: 600;}
   .legend-item                  { display:flex;align-items:center;gap:.35rem;margin-right:.75rem;font-size:.78rem }
-  .border-primary               { border:3px solid #0d6efd!important }
-  th.grid-head                  { font-size: 1rem !important;}
-  .slot-family-reserved         { background: #a9a9a9; border: 2px solid #03ab37;cursor:not-allowed; color:white; font-weight:600; }
 
   .slot-add {
     background: #10b981;
@@ -83,7 +102,6 @@ if (! function_exists('slotClass')) {
   }
   .slot-remove:hover { filter: brightness(0.95); }
 
-
   .pulse { box-shadow: 0 0 0 0 rgba(13,110,253,.6); animation: pulse 1.6s infinite; }
   @keyframes pulse {
     0%   { box-shadow: 0 0 0 0 rgba(13,110,253,.6); }
@@ -100,6 +118,20 @@ if (! function_exists('slotClass')) {
   }
   #findMatches .list-group-item { cursor:pointer; }
   #findMatches .badge { font-weight:600; }
+
+  td.cell-penalty { position: relative; }
+  td.cell-penalty::after {
+    content: "";
+    position: absolute;
+    inset: 1px;
+    border: 1.5px solid #ef4444;
+    border-radius: 1px;
+    pointer-events: none;
+  }
+
+
+  .border-primary               { border:3px solid #0d6efd!important }
+  th.grid-head                  { font-size: 1rem !important;}
 </style>
 
 @section('content')
@@ -144,7 +176,7 @@ if (! function_exists('slotClass')) {
 
         @if(request('transfer'))
           <div class="alert alert-info">
-            Click a <strong>GREEN</strong> slot for transfer destination.
+            Click a <strong>GREY</strong> slot for transfer destination.
           </div>
         @endif
 
@@ -156,15 +188,15 @@ if (! function_exists('slotClass')) {
         <div class="d-flex justify-content-between flex-wrap mb-2">
           <div class="legend-item"><h5 class="mb-0">Select a Slot:</h5></div>
           <div class="d-flex flex-wrap">
-            <div class="legend-item"><span class="legend-box slot-available"></span>Available</div>
+            <div class="legend-item"><span class="legend-box" style="background:#b0b0b0;"></span>Available</div>
+            <div class="legend-item"><span class="legend-box" style="background:#111111;"></span>Reserved</div>
             <div class="legend-item"><span class="legend-box slot-occupied"></span>Occupied</div>
-            <div class="legend-item"><span class="legend-box slot-family-reserved"></span>Reserved (Family Lock)</div>
-            <div class="legend-item"><span class="legend-box slot-renewal-pending"></span>For&nbsp;Renewal</div>
+            <div class="legend-item"><span class="legend-box slot-for-renewal"></span>For&nbsp;Renewal</div>
+            <div class="legend-item"><span class="legend-box slot-renewal-pending"></span>Renewal&nbsp;Pending</div>
             <div class="legend-item"><span class="legend-box slot-exhumation-pending"></span>For&nbsp;Exhumation</div>
             <div class="legend-item"><span class="legend-box slot-penalty"></span>For&nbsp;Penalty</div>
           </div>
         </div>
-
 
         <div class="find-panel mb-2">
           <div class="row g-2 align-items-end">
@@ -187,7 +219,6 @@ if (! function_exists('slotClass')) {
           <div id="findMatches" class="list-group mt-2"></div>
         </div>
 
-
         <div class="table-responsive">
           <table class="table table-bordered text-center mb-0">
             <thead>
@@ -206,23 +237,31 @@ if (! function_exists('slotClass')) {
                     @php
                       $cell = ($colsPerRow[$r] ?? 0) >= $c ? ($matrix[$r][$c] ?? null) : null;
                     @endphp
-                    <td style="padding:4px;">
-                      @if($cell)
-                        @php
-                          $cellFamilyId = $cell->family_id ? (int) $cell->family_id : null;
+                    @if($cell)
+                      @php
+                        $cellFamilyId = $cell->family_id ? (int) $cell->family_id : null;
 
-                          $lockedCellForApplicant = $cellFamilyId
-                              && (is_null($activeFamilyId) || $activeFamilyId !== $cellFamilyId);
+                        $lockedCellForApplicant = $cellFamilyId
+                            && (is_null($activeFamilyId) || $activeFamilyId !== $cellFamilyId);
 
-                          $familyOwnsCell = $cellFamilyId && $activeFamilyId && ($activeFamilyId === $cellFamilyId);
+                        $familyOwnsCell = $cellFamilyId && $activeFamilyId && ($activeFamilyId === $cellFamilyId);
 
-                          $availableCount = $cell->slots->filter(fn($s) => $s->display_status === 'available')->count();
-                          $canShowPlus  = $familyOwnsCell;
-                          $canShowMinus = $familyOwnsCell && $availableCount > 0;
+                        $availableCount = $cell->slots->filter(fn($s) => $s->display_status === 'available')->count();
+                        $canShowPlus  = $familyOwnsCell;
+                        $canShowMinus = $familyOwnsCell && $availableCount > 0;
 
-                          $nextNo = ($cell->slots->max('slot_no') ?? 0) + 1;
-                        @endphp
+                        $nextNo = ($cell->slots->max('slot_no') ?? 0) + 1;
 
+                        $hasPenaltySlot = $cell->slots->contains(fn($s) => $s->display_status === 'for_penalty');
+
+                        $slotIdsForCell = $cell->slots->pluck('id');
+                        $hasActiveRenewal = \App\Models\Renewal::whereIn('slot_id', $slotIdsForCell)
+                            ->whereIn('status',['pending','approved'])
+                            ->exists();
+
+                        $cellPenalty = $hasPenaltySlot && !$hasActiveRenewal;
+                      @endphp
+                      <td class="{{ $cellPenalty ? 'cell-penalty' : '' }}" style="padding:4px;">
                         <div class="slot-group"
                              data-cell-family="{{ $cellFamilyId ?? '' }}"
                              data-locked-cell="{{ $lockedCellForApplicant ? 1 : 0 }}">
@@ -237,7 +276,7 @@ if (! function_exists('slotClass')) {
 
                               $res = optional($slot->reservation);
                               $dec = $res->deceased;
-                              $ren = $slot->renewals->first();
+                              $ren = $slot->renewals->sortByDesc('id')->first();
                             @endphp
 
                             <div  class="slot-box {{ $cls }}"
@@ -252,7 +291,7 @@ if (! function_exists('slotClass')) {
                                   data-deceased="{{ $dec?->name_of_deceased }}"
                                   data-sex="{{ $dec?->sex }}"
                                   data-birthdate="{{ $dec?->date_of_birth }}"
-                                  data-deathdate="{{ $dec?->date_of_death }}"
+                                  data-deathdate="{{ $dec?->dod_ymd ?? $dec?->date_of_death }}"
                                   data-applicant="{{ $res?->applicant_name }}"
                                   data-contact="{{ $res?->applicant_contact_no }}"
                                   data-internment="{{ $res?->internment_sched }}"
@@ -282,8 +321,10 @@ if (! function_exists('slotClass')) {
                             </div>
                           @endif
                         </div>
-                      @endif
-                    </td>
+                      </td>
+                    @else
+                      <td style="padding:4px;"></td>
+                    @endif
                   @endfor
                 </tr>
               @endfor
@@ -305,7 +346,7 @@ if (! function_exists('slotClass')) {
 @include('modals.exhume-request')
 @include('modals.slot-details')
 @include('modals.choose-site')
-@include('modals.renewal-request')
+
 
 <div class="modal fade" id="successModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-sm">
@@ -340,9 +381,19 @@ const DEL_SLOT_URL_TPL = @json(route('cells.slots.destroy', ['cell' => '__CELL__
 $(function () {
   const slotM   = new bootstrap.Modal(document.getElementById('slotModal'));
   const chooseM = new bootstrap.Modal(document.getElementById('chooseSiteModal'));
-  const formM   = new bootstrap.Modal(document.getElementById('exhumReqModal'));
+  const formM   = new bootstrap.Modal(document.getElementById('exhumReqModal'), {
+    backdrop: 'static',
+    keyboard: false
+  });
   const renewalM= new bootstrap.Modal(document.getElementById('renewalModal'));
   const successM= new bootstrap.Modal(document.getElementById('successModal'));
+
+
+  document.addEventListener('show.bs.modal', (e) => {
+  document.querySelectorAll('.modal.show').forEach(m => {
+    if (m !== e.target) bootstrap.Modal.getInstance(m)?.hide();
+  });
+});
 
   function showSuccess(msg){
     $('#successMessage').text(msg || 'Request submitted successfully.');
@@ -366,20 +417,33 @@ $(function () {
     headers: {'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')}
   });
 
+
   $(document).on('click', '.slot-box', function () {
     if ($(this).hasClass('add-slot') || $(this).hasClass('remove-slot')) return;
 
     const $box   = $(this);
-    const status = $box.data('status');
+    const status = ($box.data('status') || '').toString();
     const locked = String($box.data('locked')) === '1';
 
     if (locked && isAvailable(status)) { flash('This slot is reserved for another family.'); return; }
 
     if (picking) {
-      if (!isAvailable(status)) { flash('Pick a GREEN slot.'); return; }
+      if (!isAvailable(status)) {
+        flash('Pick a GREY slot.');
+        return;
+      }
+
+      $('.slot-box[data-picked-transfer="1"]')
+        .removeClass('border-warning pulse')
+        .removeAttr('data-picked-transfer');
+
+      $box.addClass('border-warning pulse')
+          .attr('data-picked-transfer','1');
+
       $('#exhumationForm input[name=to_slot_id]').val($box.data('slot-id'));
       const destLoc = `${$box.data('apartment')} • L${$box.data('level')} R${$box.data('row')} C${$box.data('col')} S${$.trim($box.text())}`;
       $('#current_location_field').val(destLoc).prop('readonly', true);
+
       picking = false;
       formM.show();
       return;
@@ -391,17 +455,18 @@ $(function () {
       return;
     }
 
+
     $('.border-primary').removeClass('border-primary');
     $box.addClass('border-primary');
     $('#slot_id').val($box.data('slot-id'));
   });
 
   function buildDetails($b) {
-    const st = $b.data('status') ?? '';
-    const renStart  = $b.data('renewalStart')  ?? '';
-    const renEnd    = $b.data('renewalEnd')    ?? '';
-    const renStatus = $b.data('renewalStatus') ?? '';
-    const statusLabel = st.toString().toUpperCase();
+    const st          = ($b.data('status') || '').toString();
+    const renStart    = ($b.data('renewalStart')  || '').toString();
+    const renEnd      = ($b.data('renewalEnd')    || '').toString();
+    const renStatus   = ($b.data('renewalStatus') || '').toString();
+    const statusLabel = st.toUpperCase();
 
     let body = `
       <div class="row mb-3">
@@ -416,33 +481,66 @@ $(function () {
           <label class="form-control-label">
             <img src="https://img.icons8.com/doodle/20/city-buildings.png"/> APARTMENT
           </label>
-          <input class="form-control" value="${$b.data('apartment')}" readonly>
+          <input class="form-control" value="${$b.data('apartment') || ''}" readonly>
         </div>
       </div>
 
       <div class="row mb-3">
-        <div class="col"><label class="form-control-label"><img src="https://img.icons8.com/doodle/20/address.png"/> LEVEL</label><input class="form-control" value="${$b.data('level')}" readonly></div>
-        <div class="col"><label class="form-control-label"><img src="https://img.icons8.com/doodle/20/address.png"/> ROW</label><input class="form-control" value="${$b.data('row')}" readonly></div>
-        <div class="col"><label class="form-control-label"><img src="https://img.icons8.com/doodle/20/address.png"/> COLUMN</label><input class="form-control" value="${$b.data('col')}" readonly></div>
-        <div class="col"><label class="form-control-label"><img src="https://img.icons8.com/doodle/20/address.png"/> SLOT</label><input class="form-control" value="${$b.text().trim()}" readonly></div>
+        <div class="col">
+          <label class="form-control-label"><img src="https://img.icons8.com/doodle/20/address.png"/> LEVEL</label>
+          <input class="form-control" value="${$b.data('level') || ''}" readonly>
+        </div>
+        <div class="col">
+          <label class="form-control-label"><img src="https://img.icons8.com/doodle/20/address.png"/> ROW</label>
+          <input class="form-control" value="${$b.data('row') || ''}" readonly>
+        </div>
+        <div class="col">
+          <label class="form-control-label"><img src="https://img.icons8.com/doodle/20/address.png"/> COLUMN</label>
+          <input class="form-control" value="${$b.data('col') || ''}" readonly>
+        </div>
+        <div class="col">
+          <label class="form-control-label"><img src="https://img.icons8.com/doodle/20/address.png"/> SLOT</label>
+          <input class="form-control" value="${$b.text().trim()}" readonly>
+        </div>
       </div>
 
       <div class="row mb-3">
-        <div class="col"><label class="form-control-label"><img src="https://img.icons8.com/plasticine/20/headstone.png"/> DECEASED NAME</label><input class="form-control" value="${$b.data('deceased') ?? ''}" readonly></div>
-        <div class="col"><label class="form-control-label"><img src="https://img.icons8.com/stickers/20/gender.png"/> SEX</label><input class="form-control" value="${$b.data('sex') ?? ''}" readonly></div>
-        <div class="col"><label class="form-control-label"><img src="https://img.icons8.com/arcade/20/birth-date.png"/> BIRTHDATE</label><input class="form-control" value="${$b.data('birthdate') ?? ''}" readonly></div>
-        <div class="col"><label class="form-control-label"><img src="https://img.icons8.com/stickers/20/self-destruct-button.png"/> DEATH DATE</label><input class="form-control" value="${$b.data('deathdate') ?? ''}" readonly></div>
+        <div class="col">
+          <label class="form-control-label"><img src="https://img.icons8.com/plasticine/20/headstone.png"/> DECEASED NAME</label>
+          <input class="form-control" value="${$b.data('deceased') || ''}" readonly>
+        </div>
+        <div class="col">
+          <label class="form-control-label"><img src="https://img.icons8.com/stickers/20/gender.png"/> SEX</label>
+          <input class="form-control" value="${$b.data('sex') || ''}" readonly>
+        </div>
+        <div class="col">
+          <label class="form-control-label"><img src="https://img.icons8.com/arcade/20/birth-date.png"/> BIRTHDATE</label>
+          <input class="form-control" value="${$b.data('birthdate') || ''}" readonly>
+        </div>
+        <div class="col">
+          <label class="form-control-label"><img src="https://img.icons8.com/stickers/20/self-destruct-button.png"/> DEATH DATE</label>
+          <input class="form-control" value="${$b.data('deathdate') || ''}" readonly>
+        </div>
       </div>
 
       <div class="row mb-3">
-        <div class="col"><label class="form-control-label"><img src="https://img.icons8.com/doodle/20/test-account.png"/> CONTACT PERSON</label><input class="form-control" value="${$b.data('applicant') ?? ''}" readonly></div>
-        <div class="col"><label class="form-control-label"><img src="https://img.icons8.com/doodle/20/apple-phone.png"/> CONTACT NUMBER</label><input class="form-control" value="${$b.data('contact') ?? ''}" readonly></div>
-        <div class="col"><label class="form-control-label"><img src="https://img.icons8.com/doodle/20/apple-calendar--v1.png"/> INTERNMENT</label><input class="form-control" value="${$b.data('internment') ?? ''}" readonly></div>
+        <div class="col">
+          <label class="form-control-label"><img src="https://img.icons8.com/doodle/20/test-account.png"/> CONTACT PERSON</label>
+          <input class="form-control" value="${$b.data('applicant') || ''}" readonly>
+        </div>
+        <div class="col">
+          <label class="form-control-label"><img src="https://img.icons8.com/doodle/20/apple-phone.png"/> CONTACT NUMBER</label>
+          <input class="form-control" value="${$b.data('contact') || ''}" readonly>
+        </div>
+        <div class="col">
+          <label class="form-control-label"><img src="https://img.icons8.com/doodle/20/apple-calendar--v1.png"/> INTERNMENT</label>
+          <input class="form-control" value="${$b.data('internment') || ''}" readonly>
+        </div>
       </div>
     `;
 
     if (renStatus) {
-      const badge = {pending:'warning', approved:'success', denied:'danger'}[renStatus] ?? 'secondary';
+      const badge = { pending:'warning', approved:'success', denied:'danger' }[renStatus.toLowerCase()] || 'secondary';
       body += `
         <div class="row mb-3">
           <div class="col">
@@ -465,29 +563,38 @@ $(function () {
       `;
     }
 
-    const canRequestRenewal    = renStatus !== 'pending';
-    const canRequestExhumation = renStatus !== 'pending';
+    const statusRaw       = (renStatus || '').toString().toLowerCase();
+    const slotUiStatus    = (st || '').toString().toLowerCase();
+    const isPenalty       = (slotUiStatus === 'for_penalty');
+    const isForRenewal    = (slotUiStatus === 'for_renewal');
+    const hasPendingRen   = (statusRaw === 'pending');
 
-    if (['occupied','reserved','renewal_pending','exhumation_pending', 'for_penalty'].includes(st)) {
+
+    const canRequestRenewal    = (!hasPendingRen && (isPenalty || isForRenewal || statusRaw === 'denied'));
+    const canRequestExhumation = (statusRaw !== 'pending');
+
+    if (['occupied','reserved','renewal_pending','exhumation_pending','for_penalty','for_renewal'].includes(slotUiStatus)) {
       body += `
         ${canRequestExhumation ? `
           <button type="button"
                   class="btn btn-danger me-2 mt-2 open-exhum-form"
-                  data-reservation="${$b.data('reservation')}"
-                  data-from-slot="${$b.data('slot-id')}">
+                  data-reservation="${$b.data('reservation') || ''}"
+                  data-from-slot="${$b.data('slot-id') || ''}">
             Request Exhumation
           </button>` : ''}
 
         ${canRequestRenewal ? `
           <button type="button"
                   class="btn btn-warning mt-2 open-renewal-form"
-                  data-slot="${$b.data('slot-id')}">
+                  data-slot="${$b.data('slot-id') || ''}">
             Request Renewal
           </button>` : ''}
       `;
     }
+
     $('#slotModal .modal-body').html(body);
   }
+
 
   $(document).on('click', '.add-slot', function () {
     const $btn   = $(this);
@@ -566,17 +673,18 @@ $(function () {
   });
 
   $(document).on('click', '.open-exhum-form', function () {
-    fromSlotId    = $(this).data('from-slot');
+    const fromSlot = $(this).data('from-slot');
+    fromSlotId    = fromSlot;
     reservationId = $(this).data('reservation');
 
-    const $srcBox = $(`.slot-box[data-slot-id="${fromSlotId}"]`);
+    const $srcBox = $(`.slot-box[data-slot-id="${fromSlot}"]`);
     const currLoc = `Apartment: ${$srcBox.data('apartment')} • `
                   + `L${$srcBox.data('level')} R${$srcBox.data('row')} `
                   + `C${$srcBox.data('col')} S${$.trim($srcBox.text())}`;
 
     $('#exhum_current_location').val(currLoc).prop('readonly', true);
     $('#exhum_deceased_name').val($srcBox.data('deceased') || '').prop('readonly', true);
-    $('#exhum_date_of_death').val($srcBox.data('deathdate') || '').prop('readonly', true);
+    $('#exhum_date_of_death').val(($srcBox.data('deathdate') || '').toString().substring(0,10)).prop('readonly', true);
     $('#exhum_contact').val('');
 
     slotM.hide();
@@ -613,11 +721,17 @@ $(function () {
     const lvl = $('#modal_level').val();
     if (!lvl) return;
 
+    const $srcBox = $(`.slot-box[data-slot-id="${fromSlotId}"]`);
+    const decName = ($srcBox.data('deceased')  || '').toString();
+    const decDod  = ($srcBox.data('deathdate') || '').toString().substring(0,10);
+
     const qs = $.param({
       transfer:       1,
       reservation_id: reservationId,
       from_slot_id:   fromSlotId,
-      curr_loc:       $('#exhum_current_location').val()
+      curr_loc:       $('#exhum_current_location').val(),
+      exhum_dec_name: decName,
+      exhum_dod:      decDod
     });
     window.location = `{{ url('/') }}/levels/${lvl}/grid?` + qs;
   });
@@ -628,21 +742,25 @@ $(function () {
     $('#exhumationForm input[name=from_slot_id]').val("{{ request('from_slot_id') }}");
   @endif
 
-  $(document).on('click', '.open-renewal-form', function () {
-    slotM.hide();
-    const slotId = $(this).data('slot');
-    const $box   = $(`.slot-box[data-slot-id="${slotId}"]`);
-    const resId  = $box.data('reservation');
+ $(document).on('click', '.open-renewal-form', function () {
+  const slotId = $(this).data('slot');
+  const $box   = $(`.slot-box[data-slot-id="${slotId}"]`);
+  const resId  = $box.data('reservation');
 
-    $('#renewalForm input[name=slot_id]').val(slotId);
-    $('#renewalForm input[name=reservation_id]').val(resId);
+  $box.closest('td').removeClass('cell-penalty');
 
-    const today = new Date().toISOString().substring(0,10);
-    $('#renewal_start').val(today);
-    $('#renewal_end').val(`${parseInt(today.substring(0,4))+5}${today.substring(4)}`);
+  $('#renewalForm input[name=slot_id]').val(slotId);
+  $('#renewalForm input[name=reservation_id]').val(resId);
 
-    renewalM.show();
-  });
+  const today = new Date().toISOString().substring(0,10);
+  $('#renewal_start').val(today);
+  $('#renewal_end').val(`${parseInt(today.substring(0,4))+5}${today.substring(4)}`);
+
+
+  slotM.hide();
+
+  renewalM.show();
+});
 
   $('#renewal_start').on('change', function () {
     const [y,m,d] = this.value.split('-').map(Number);
@@ -684,7 +802,6 @@ $(function () {
     showSuccess('Exhumation request submitted successfully.');
   }
 
-
   const allSlots = [];
   const nameSet = new Set();
 
@@ -695,7 +812,6 @@ $(function () {
       .replace(/ñ/gi, 'n')
       .trim().toLowerCase();
   }
-
 
   $('.slot-box').each(function(){
     const $b = $(this);
@@ -722,26 +838,24 @@ $(function () {
       allSlots.push(item);
       nameSet.add(item.name);
 
-      const loc = `${item.apt} • L${item.lvl} R${item.row} C${item.col} S${item.slotNo}`;
       $b.attr({
-        'title': item.name ? `${item.name}\n${loc}` : loc,
+        'title': item.name,
         'data-bs-toggle': 'tooltip',
         'data-bs-placement': 'top'
       });
+    } else {
+      $b.removeAttr('title data-bs-toggle data-bs-placement');
     }
   });
-
 
   [...document.querySelectorAll('[data-bs-toggle="tooltip"]')].forEach(el => {
     new bootstrap.Tooltip(el, { trigger: 'hover focus' });
   });
 
-
   const $dl = $('#deceasedList');
   [...nameSet].sort((a,b)=>a.localeCompare(b)).forEach(n => {
     $dl.append(`<option value="${$('<div/>').text(n).html()}"></option>`);
   });
-
 
   const $results = $('#findMatches');
   let lastMatchedIds = new Set();
@@ -756,24 +870,6 @@ $(function () {
     return `${item.apt} • L${item.lvl} R${item.row} C${item.col} S${item.slotNo}`;
   }
 
-  function focusSlotById(id, openDetails = true) {
-    const $box = $(`.slot-box[data-slot-id="${id}"]`);
-    if (!$box.length) return;
-
-    $('.border-warning').removeClass('border-warning pulse');
-    $box.addClass('border-warning pulse');
-
-    $box[0].scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
-
-    if (openDetails) {
-      buildDetails($box);
-      const st = ($box.data('status') || '').toString();
-      if (st !== 'available' && st !== 'exhumed') {
-        slotM.show();
-      }
-    }
-  }
-
   function renderResults(matches) {
     $results.empty();
 
@@ -783,7 +879,6 @@ $(function () {
     }
 
     matches.slice(0, 100).forEach(m => {
-      const copyText = `${m.name} — ${labelOf(m)}`;
       $results.append(`
         <div class="list-group-item d-flex justify-content-between align-items-center">
           <div>
@@ -791,7 +886,6 @@ $(function () {
             ${m.dod ? `<span class="badge bg-light text-dark ms-1">DOD: ${$('<div/>').text(m.dod).html()}</span>` : ''}
             <div class="text-muted small">${$('<div/>').text(labelOf(m)).html()}</div>
           </div>
-
         </div>
       `);
     });
@@ -829,7 +923,6 @@ $(function () {
     });
   }
 
-
   $('#btnFind').on('click', doFind);
   $('#findName').on('keyup', e => { if (e.key === 'Enter') doFind(); });
   $('#findDOD').on('change', doFind);
@@ -850,28 +943,22 @@ $(function () {
     clearHighlights();
   });
 
-  $results.on('click', '.goto-slot', function(){
-    const id = $(this).data('id');
-    focusSlotById(id, true);
-  });
-
-  $results.on('click', '.copy-loc', function(){
-    const txt = $(this).data('copy');
-    navigator.clipboard.writeText($('<textarea/>').html(txt).text()).then(() => {
-      const $btn = $(this);
-      const old = $btn.text();
-      $btn.text('Copied!');
-      setTimeout(()=> $btn.text(old), 900);
-    });
-  });
-
-
   const urlQS = new URLSearchParams(window.location.search);
   const focusId = urlQS.get('focus_slot_id');
   const findNameQS = urlQS.get('find');
 
   if (focusId) {
-    focusSlotById(focusId, true);
+    const $box = $(`.slot-box[data-slot-id="${focusId}"]`);
+    if ($box.length) {
+      $('.border-primary').removeClass('border-primary');
+      $box.addClass('border-primary pulse');
+      $box[0].scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+      const st = ($box.data('status') || '').toString();
+      if (st !== 'available' && st !== 'exhumed') {
+        buildDetails($box);
+        slotM.show();
+      }
+    }
   } else if (findNameQS) {
     $('#findName').val(findNameQS);
     doFind();
@@ -886,6 +973,18 @@ $(function () {
   $('#exhum_current_location')
     .val(@json(request('curr_loc')))
     .prop('readonly', true);
+});
+</script>
+@endif
+
+@if(request('transfer'))
+<script>
+$(function () {
+  const decName = @json(request('exhum_dec_name'));
+  const decDod  = @json(request('exhum_dod'));
+
+  if (decName) $('#exhum_deceased_name').val(decName).prop('readonly', true);
+  if (decDod)  $('#exhum_date_of_death').val(String(decDod).substring(0,10)).prop('readonly', true);
 });
 </script>
 @endif

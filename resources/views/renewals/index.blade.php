@@ -21,6 +21,9 @@
 
   .badge.bg-warning { background-color: #ffc107 !important; color: #fff !important; }
   .badge.bg-purple  { background-color: #6f42c1 !important; color: #fff !important; }
+  .badge.bg-success { background-color: #28a745 !important; color: #fff !important; }
+  .badge.bg-danger  { background-color: #dc3545 !important; color: #fff !important; }
+  .badge.bg-secondary { background-color:#6c757d !important; color:#fff !important; }
 
   .dataTables_wrapper .dt-header { margin-bottom: .5rem; }
   .dataTables_wrapper .dataTables_length label,
@@ -126,7 +129,6 @@
                 <th class="text-white">Renewal&nbsp;Period</th>
                 <th class="text-white">Status</th>
                 @if($showValidityCol)
-
                   <th class="text-white">OR&nbsp;No.</th>
                   <th class="text-white">Validity</th>
                 @endif
@@ -198,7 +200,6 @@
                 <td><span class="badge {{ $badge }}">{{ $statusLabel }}</span></td>
 
                 @if($showValidityCol)
-
                   <td>{{ ($rawStatus === 'approved') ? ($r->or_number ?? '—') : '—' }}</td>
                   <td>
                     @if($validityText !== '')
@@ -212,24 +213,26 @@
                     <i class="fa fa-print" aria-hidden="true"></i>
                   </a>
 
+
+                  @if ($rawStatus !== 'approved')
                   <button type="button"
                           class="btn btn-sm btn-info edit-renewal-btn"
                           data-id="{{ $r->id }}"
                           title="View / Edit">
                     <i class="fa fa-eye" aria-hidden="true"></i>
                   </button>
+                  @endif
 
                   @if ($r->status === 'pending')
-                    @if(!$isMulti)
+                    @if($isMulti)
+
                       <button type="button"
-                              class="btn btn-sm btn-success approve-btn"
-                              data-toggle="modal"
-                              data-target="#approveModal"
-                              data-action="{{ route('renewals.approve', $r) }}"
-                              title="Approve">
-                        <i class="fa fa-check" aria-hidden="true"></i>
+                              class="btn btn-sm btn-warning open-bulk-rel-btn"
+                              data-id="{{ $r->id }}"
+                              title="Set relationship per occupant">
+                        <i class="fa fa-users" aria-hidden="true"></i>
                       </button>
-                    @else
+
                       <button type="button"
                               class="btn btn-sm btn-primary approve-batch-btn"
                               data-toggle="modal"
@@ -238,12 +241,30 @@
                               title="Approve all pending renewals in this cell">
                         <i class="fa fa-check-double" aria-hidden="true"></i>
                       </button>
-                    @endif
 
-                    <form action="{{ route('renewals.deny', $r) }}" method="POST" class="d-inline" onsubmit="return confirm('Deny this request?');">
-                      @csrf
-                      <button class="btn btn-sm btn-danger" title="Deny"><i class="fa fa-times" aria-hidden="true"></i></button>
-                    </form>
+                      <button type="button"
+                              class="btn btn-sm btn-danger deny-batch-btn"
+                              data-toggle="modal"
+                              data-target="#denyBatchModal"
+                              data-batch-action="{{ route('renewals.denyBatch', $r) }}"
+                              title="Deny all pending renewals in this cell">
+                        <i class="fa fa-times-circle" aria-hidden="true"></i>
+                      </button>
+                    @else
+                      <button type="button"
+                              class="btn btn-sm btn-success approve-btn"
+                              data-toggle="modal"
+                              data-target="#approveModal"
+                              data-action="{{ route('renewals.approve', $r) }}"
+                              title="Approve">
+                        <i class="fa fa-check" aria-hidden="true"></i>
+                      </button>
+
+                      <form action="{{ route('renewals.deny', $r) }}" method="POST" class="d-inline" onsubmit="return confirm('Deny this request?');">
+                        @csrf
+                        <button class="btn btn-sm btn-danger" title="Deny"><i class="fa fa-times" aria-hidden="true"></i></button>
+                      </form>
+                    @endif
                   @endif
                 </td>
               </tr>
@@ -293,7 +314,7 @@
         @csrf
         <div class="modal-header">
           <h5 class="modal-title"><img class="mr-2" src="https://img.icons8.com/doodle/25/checked-checkbox.png"/> Approve All (Same Cell)</h5>
-          <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span class="icon">&times;</span></button>
         </div>
 
         <div class="modal-body">
@@ -313,6 +334,28 @@
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
           <button type="submit" class="btn btn-success">Save &amp; Approve All</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+<div class="modal fade" id="denyBatchModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <form id="denyBatchForm" method="POST">
+        @csrf
+        <div class="modal-header">
+          <h5 class="modal-title">Deny All (Same Cell)</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span>&times;</span></button>
+        </div>
+        <div class="modal-body">
+          <p class="mb-0">Are you sure you want to proceed?</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">No, keep pending</button>
+          <button type="submit" class="btn btn-danger">Yes, Deny All</button>
         </div>
       </form>
     </div>
@@ -420,6 +463,32 @@
     </div>
   </div>
 </div>
+
+
+<div class="modal fade" id="bulkRelModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <form id="bulkRelForm" method="POST">
+        <input type="hidden" name="_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="_method" value="PATCH">
+        <div class="modal-header">
+          <h5 class="modal-title">Set Relationship Per Occupant</h5>
+          <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+        </div>
+        <div class="modal-body">
+          <div id="bulkRelBody"><div class="text-center p-3">Loading...</div></div>
+          <div class="alert alert-info small mb-0">
+            Only <strong>pending</strong> renewals in this cell are editable here.
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-success">Save All</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 @endsection
 
 @push('scripts')
@@ -454,7 +523,6 @@ $(function () {
       pagingType   : 'full_numbers',
       order        : [[5, 'desc']],
       language     : { paginate: { next:'>', previous:'<', first:'<<', last:'>>' } },
-
       columnDefs   : (window.SHOW_VALIDITY
                       ? [{ orderable:false, targets:[-1, -2] }]
                       : [{ orderable:false, targets:[-1] }])
@@ -480,6 +548,10 @@ $(function () {
   $(document).on('click', '.approve-batch-btn', function () {
     $('#approveBatchForm').attr('action', $(this).data('batch-action'));
     $('#approveBatchForm')[0]?.reset();
+  });
+
+  $(document).on('click', '.deny-batch-btn', function () {
+    $('#denyBatchForm').attr('action', $(this).data('batch-action'));
   });
 
   var $currentRow = null;
@@ -588,11 +660,9 @@ $(function () {
         }
 
         if (resp.payload && resp.payload.buried_at) {
-
           $currentRow.find('td').eq(4).text(resp.payload.buried_at);
           $('[name=dec_buried_at]').val(resp.payload.buried_at);
         }
-
 
         $currentRow.find('td').eq(5).text(periodText);
 
@@ -631,6 +701,67 @@ $(function () {
       complete: function () {
         $btn.prop('disabled', false);
         setViewMode(true);
+      }
+    });
+  });
+
+
+  var bulkRelAnchorId = null;
+
+  $(document).on('click', '.open-bulk-rel-btn', function(){
+    bulkRelAnchorId = $(this).data('id');
+    if (!bulkRelAnchorId) return;
+
+    $('#bulkRelBody').html('<div class="text-center p-3">Loading...</div>');
+    $('#bulkRelForm').attr('action', "{{ url('/renewals') }}/" + bulkRelAnchorId + "/bulk-relationships");
+
+    $.getJSON("{{ url('/renewals') }}/" + bulkRelAnchorId + "/pending-by-cell", function(resp){
+      var html = '';
+      if (resp.items && resp.items.length) {
+        html += '<div class="mb-2"><strong>Cell:</strong> ' + (resp.cell_label || '—') + '</div>';
+        html += '<div class="table-responsive"><table class="table table-bordered mb-0"><thead><tr>'
+              + '<th>Deceased</th><th>Location</th><th>Relationship to Deceased</th></tr></thead><tbody>';
+
+        resp.items.forEach(function(it){
+          html += '<tr>'
+               +   '<td>'+ (it.deceased || '—') +'</td>'
+               +   '<td>'+ (it.location || '—') +'</td>'
+               +   '<td><input type="text" class="form-control form-control-sm" '
+               +       'name="relationship_map['+ it.renewal_id +']" '
+               +       'value="'+ (it.relationship ? $('<div/>').text(it.relationship).html() : '') +'"></td>'
+               + '</tr>';
+        });
+
+        html += '</tbody></table></div>';
+      } else {
+        html = '<div class="alert alert-info mb-0">No pending renewals found in this cell.</div>';
+      }
+      $('#bulkRelBody').html(html);
+    });
+
+    $('#bulkRelModal').modal('show');
+  });
+
+  $('#bulkRelForm').on('submit', function(e){
+    e.preventDefault();
+    var $form = $(this);
+    var $btn  = $form.find('button[type=submit]').prop('disabled', true);
+
+    $.ajax({
+      url: $form.attr('action'),
+      method: 'POST',
+      data: $form.serialize(),
+      success: function(resp){
+        $('#bulkRelModal').modal('hide');
+        if (window.location && window.location.reload) {
+          setTimeout(function(){ window.location.reload(); }, 300);
+        }
+      },
+      error: function(xhr){
+        alert('Failed to save. Please review inputs and try again.');
+      },
+      complete: function(){
+        $btn.prop('disabled', false);
       }
     });
   });

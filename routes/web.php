@@ -36,7 +36,8 @@ Route::group(['middleware' => 'prevent-back-history'], function () {
 
     Route::get('Homepage', [HomeController::class, 'homepage'])->name('Homepage');
 
-
+    Route::get('logs', [HomeController::class,'logs'])->name('logs');
+    
     Route::get('/apply/burial', fn () => view('burial_applicant_gate'))->name('burial.apply.gate');
 
     Route::get('burial_application_form', [BurialPermitController::class, 'burial_application_form'])
@@ -134,6 +135,9 @@ Route::patch('/api/families/{family}', [LookupController::class, 'updateFamily']
         Route::get('exhumations/{exhumation}', [ExhumationPermitController::class, 'show'])
     ->name('exhumations.show')->whereNumber('exhumation');
 
+    Route::post('/exhumations/{exhumation}/deny-batch', [ExhumationPermitController::class, 'denyBatch'])
+    ->name('exhumations.denyBatch');
+
 
 Route::patch('exhumations/{exhumation}', [ExhumationPermitController::class, 'update'])
     ->name('exhumations.update')->whereNumber('exhumation');
@@ -166,6 +170,15 @@ Route::patch('exhumations/{exhumation}', [ExhumationPermitController::class, 'up
 
     Route::patch('/renewals/{renewal}', [RenewalPermitController::class, 'update'])
         ->name('renewals.update')->whereNumber('renewal');
+
+        Route::post('/renewals/{renewal}/deny-batch', [RenewalPermitController::class, 'denyBatch'])
+    ->name('renewals.denyBatch');
+
+
+    Route::get('/renewals/{renewal}/pending-by-cell', [RenewalPermitController::class, 'pendingByCell'])
+    ->name('renewals.pendingByCell');
+Route::patch('/renewals/{renewal}/bulk-relationships', [RenewalPermitController::class, 'bulkRelationships'])
+    ->name('renewals.bulkRelationships');
 
     Route::get('/reservations/datatable', [ReservationController::class, 'datatable'])
         ->name('reservations.datatable');

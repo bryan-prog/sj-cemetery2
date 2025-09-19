@@ -20,39 +20,46 @@ class Slot extends Model
 
     public function renewals()
     {
+
         return $this->hasMany(Renewal::class)->latest('id');
     }
 
-    public function getDisplayStatusAttribute(): string
-    {
-        if (in_array($this->status, ['renewal_pending','exhumation_pending'])) {
-            return $this->status;
-        }
 
-
-        if ($this->status === 'available') {
-            return 'available';
-        }
-
-        $now = Carbon::now()->startOfDay();
-
-        $internment = optional($this->reservation)->internment_sched
-                     ? Carbon::parse($this->reservation->internment_sched)
-                     : null;
-
-        $latestRenewal = $this->renewals()
-                              ->whereRaw('LOWER(status) = ?', ['approved'])
-                              ->first();
-
-        $renewalEnd   = $latestRenewal?->renewal_end;
-
-        $coverageEnd  = $renewalEnd
-                      ?? ($internment ? $internment->copy()->addYears(5) : null);
-
-        return ($coverageEnd && $coverageEnd->lt($now))
-               ? 'for_penalty'
-               : $this->status;
+   public function getDisplayStatusAttribute(): string
+{
+    // Respect transient states
+    if (in_array($this->status, ['renewal_pending','exhumation_pending'], true)) {
+        return $this->status;
     }
+
+    // Available-like stay as-is
+    if ($this->status === 'available' || $this->status === 'exhumed') {
+        return $this->status;
+    }
+
+    // Compute window for occupied slots
+    if ($this->status === 'occupied') {
+        $cellId = (int) $this->grave_cell_id;
+
+        /** @var \App\Support\CellCoverage $cov */
+        $cov = app(\App\Support\CellCoverage::class);
+        $window = $cov->cellWindow($cellId, \Carbon\Carbon::now());
+
+        switch ($window['state']) {
+            case 'covered':
+                return 'occupied';
+            case 'grace':
+                // Past 5 years by ≥1 day but within 1 year → show teal
+                return 'for_renewal';
+            case 'penalty':
+            default:
+                return 'for_penalty';
+        }
+    }
+
+    // Fallback
+    return $this->status;
+}
 
     public function getLocationLabelAttribute(): ?string
     {

@@ -178,7 +178,7 @@
         </div>
     </div>
 </div>
-
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
 <script type="application/javascript">
 window.setTimeout(function () {
    $(".alert").fadeTo(500, 0).slideUp(500, function () {

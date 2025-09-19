@@ -87,6 +87,19 @@
             </div>
             <ul class="navbar-nav ml-lg-auto">
               <li>
+                @if(Auth::user()->permission == 'Super Admin')
+                <a class="nav-link pr-0" href="{{ URL('/logs') }}" role="button" aria-haspopup="true" aria-expanded="false">
+                  <div class="media align-items-center">
+                    <div class="media-body ml-2 d-none d-lg-block">
+                      <span class="mb-0 text-sm font-weight-bold text-white">
+                        Action Logs
+                      </span>
+                    </div>
+                  </div>
+                </a>
+                @endif
+              </li>
+              <li>
                 <a class="nav-link pr-0" href="#" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                   <div class="media align-items-center">
                     <div class="media-body ml-2 d-none d-lg-block">

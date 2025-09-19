@@ -54,6 +54,22 @@ class User extends Authenticatable
     ];
 
 
+    public function actionLogs()
+{
+    return $this->hasMany(\App\Models\ActionLog::class);
+}
+
+
+public function getDisplayNameAttribute(): string
+{
+
+    if (!empty($this->username)) return $this->username;
+
+    $parts = array_filter([$this->fname ?? null, $this->mname ?? null, $this->lname ?? null, $this->suffix ?? null]);
+    return $parts ? implode(' ', $parts) : 'Unknown User';
+}
+
+
 
 
 }

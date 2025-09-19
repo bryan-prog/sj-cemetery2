@@ -169,15 +169,19 @@
                     <i class="fa fa-print" aria-hidden="true"></i>
                   </a>
 
+                  {{-- SHOW Edit button only if NOT approved/exhumed --}}
+                  @if (!in_array($ex->status, ['approved','exhumed'], true))
                   <button type="button"
                           class="btn btn-sm btn-info edit-exh-btn"
                           data-id="{{ $ex->id }}"
                           title="View / Edit">
                     <i class="fa fa-eye" aria-hidden="true"></i>
                   </button>
+                  @endif
 
                   @if($ex->status === 'pending')
                     @if($originIsBulk)
+
                       <button type="button"
                               class="btn btn-sm btn-primary approve-batch-btn"
                               title="Mark all pending from this origin cell as Exhumed"
@@ -186,7 +190,17 @@
                               data-batch-action="{{ route('exhumations.approveBatch', $ex) }}">
                         <i class="fa fa-check-double" aria-hidden="true"></i>
                       </button>
+
+                      <button type="button"
+                              class="btn btn-sm btn-danger deny-batch-btn"
+                              title="Deny all pending from this origin cell"
+                              data-toggle="modal"
+                              data-target="#denyBatchModal"
+                              data-batch-action="{{ route('exhumations.denyBatch', $ex) }}">
+                        <i class="fa fa-times-circle" aria-hidden="true"></i>
+                      </button>
                     @else
+
                       <button type="button"
                               class="btn btn-sm btn-success approve-btn"
                               data-toggle="modal"
@@ -195,17 +209,17 @@
                               title="Mark Exhumed">
                         <i class="fa fa-check" aria-hidden="true"></i>
                       </button>
-                    @endif
 
-                    <form method="POST"
-                          action="{{ route('exhumations.deny', $ex) }}"
-                          class="d-inline"
-                          onsubmit="return confirm('Deny this request?');">
-                      @csrf
-                      <button class="btn btn-sm btn-danger" title="Deny">
-                        <i class="fa fa-times" aria-hidden="true"></i>
-                      </button>
-                    </form>
+                      <form method="POST"
+                            action="{{ route('exhumations.deny', $ex) }}"
+                            class="d-inline"
+                            onsubmit="return confirm('Deny this request?');">
+                        @csrf
+                        <button class="btn btn-sm btn-danger" title="Deny">
+                          <i class="fa fa-times" aria-hidden="true"></i>
+                        </button>
+                      </form>
+                    @endif
                   @endif
                 </td>
               </tr>
@@ -217,6 +231,7 @@
     </div>
   </div>
 </div>
+
 
 
 <div class="modal fade" id="approveModal" tabindex="-1" role="dialog" aria-hidden="true">
@@ -300,6 +315,34 @@
 </div>
 
 
+<div class="modal fade" id="denyBatchModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <form id="denyBatchForm" method="POST">
+        @csrf
+        <div class="modal-header">
+          <h5 class="modal-title">
+           Deny All (Same Cell)
+          </h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span>&times;</span>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <p class="mb-0">Are you sure you want to proceed?</p>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">No, keep pending</button>
+          <button type="submit" class="btn btn-danger">Yes, Deny All</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
 <div class="modal fade" id="editExhModal" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-xl" role="document">
     <div class="modal-content">
@@ -348,7 +391,6 @@
             </div>
             <div class="form-group col-md-8">
               <label class="form-control-label"><img src="https://img.icons8.com/officel/20/cemetery.png"/>Transfer Location</label>
-
               <input type="text" class="form-control ex-ro" name="current_location" disabled>
             </div>
           </div>
@@ -404,14 +446,14 @@
         integrity="sha384-Fy6S3B9q64WdZWQUiU+q4/2LcEk3A2KlFwgag7W/sJtrrUpAI8Q4K3sF86dIHNDz"
         crossorigin="anonymous"></script>
 
-
 <script>
-  const EXH_SHOW_URL_TPL         = @json(route('exhumations.show',   ['exhumation' => '__ID__']));
-  const EXH_UPDATE_URL_TPL       = @json(route('exhumations.update', ['exhumation' => '__ID__']));
-  const EXH_APPROVE_URL_TPL      = @json(route('exhumations.approve', ['exhumation' => '__ID__']));
-  const EXH_APPROVE_BATCH_URL_TPL= @json(route('exhumations.approveBatch', ['exhumation' => '__ID__']));
-  const EXH_DENY_URL_TPL         = @json(route('exhumations.deny', ['exhumation' => '__ID__']));
-  const EXH_PERMIT_URL_TPL       = @json(route('exhumations.permit', ['exhumation' => '__ID__']));
+  const EXH_SHOW_URL_TPL           = @json(route('exhumations.show',   ['exhumation' => '__ID__']));
+  const EXH_UPDATE_URL_TPL         = @json(route('exhumations.update', ['exhumation' => '__ID__']));
+  const EXH_APPROVE_URL_TPL        = @json(route('exhumations.approve', ['exhumation' => '__ID__']));
+  const EXH_APPROVE_BATCH_URL_TPL  = @json(route('exhumations.approveBatch', ['exhumation' => '__ID__']));
+  const EXH_DENY_URL_TPL           = @json(route('exhumations.deny', ['exhumation' => '__ID__']));
+  const EXH_DENY_BATCH_URL_TPL     = @json(route('exhumations.denyBatch', ['exhumation' => '__ID__']));
+  const EXH_PERMIT_URL_TPL         = @json(route('exhumations.permit', ['exhumation' => '__ID__']));
 </script>
 
 <script>
@@ -460,6 +502,10 @@ $(function () {
   $(document).on('click', '.approve-batch-btn', function () {
     $('#approveBatchForm').attr('action', $(this).data('batch-action'));
     $('#approveBatchForm')[0]?.reset();
+  });
+
+  $(document).on('click', '.deny-batch-btn', function () {
+    $('#denyBatchForm').attr('action', $(this).data('batch-action'));
   });
 
   var $currentRow = null;
@@ -568,7 +614,6 @@ $(function () {
       method: 'POST',
       data: formData,
       success: function (resp) {
-
         $currentRow.find('td').eq(0).text($('[name=requesting_party]').val());
         $currentRow.find('td').eq(1).text($('[name=relationship_to_deceased]').val() || '—');
         $currentRow.find('td').eq(2).text($('[name=date_applied]').val() || '—');
