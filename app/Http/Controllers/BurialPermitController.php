@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Models\{
     Reservation, Deceased, GraveDiggers, Verifier,
-    BurialSite, Level, GraveCell, Slot, Family
+    BurialSite, Level, GraveCell, Slot, Family, ActionLog
 };
 use Carbon\Carbon;
 use Illuminate\Validation\ValidationException;
@@ -151,7 +151,7 @@ class BurialPermitController extends Controller
             $slot->update(['status' => 'occupied']);
 
 
-            Reservation::create([
+           $reservation =  Reservation::create([
                 'level_id'                 => $v['level_id'],
                 'burial_site_id'           => $v['burial_site_id'],
                 'deceased_id'              => $deceased->id,
@@ -174,6 +174,32 @@ class BurialPermitController extends Controller
                 'funeral_service'          => $v['funeral_service'] ?? null,
                 'other_info'               => $v['other_info'] ?? null,
                 'internment_sched'         => $v['internment_sched'],
+            ]);
+
+            $user = auth()->user();
+            $username = $user?->username ?? trim(($user->fname ?? '') . ' ' . ($user->lname ?? '')) ?: null;
+
+
+            $dec = $reservation->deceased;
+            $deceasedName = $dec?->full_name
+                ?? ($dec?->last_name ? ($dec->last_name . ', ' . ($dec->first_name ?? '')) : null);
+
+            $location = $reservation->location_or_apt_level;
+
+            ActionLog::create([
+                'user_id'     => $user?->id,
+                'username'    => $username,
+                'action'      => 'reservation.created',
+                'target_type' => \App\Models\Reservation::class,
+                'target_id'   => $reservation->id,
+                'happened_at' => now(),
+                'details'     => [
+                    'deceased'         => $deceasedName,
+                    'location'         => $location,
+                    'applicant'        => $reservation->applicant_name,
+                    'relationship'     => $reservation->relationship_to_deceased,
+                    'internment_sched' => optional($reservation->internment_sched)->format('Y-m-d H:i:s'),
+                ],
             ]);
         });
 

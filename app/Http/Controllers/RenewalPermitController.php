@@ -148,7 +148,7 @@ class RenewalPermitController extends Controller
         $data['renewal_start'] = $pStart->toDateString();
         $data['renewal_end']   = $pEnd->toDateString();
 
-        // Replace any existing Penalty line
+
         $existingRemarks  = trim((string)($data['remarks'] ?? $renewal->remarks ?? ''));
         $withoutPenalty   = preg_replace('/\s*Penalty:\s*\d+\s*year\(s\)\s*×.*$/i', '', $existingRemarks);
         $penLine          = "Penalty: {$pen['years']} year(s) × ".number_format(self::PENALTY_PER_YEAR,2,'.','')." = ".number_format($pen['amount'],2,'.','');
@@ -158,13 +158,13 @@ class RenewalPermitController extends Controller
         $updatedCount = 0;
 
         DB::transaction(function () use ($applyToCell, $slotIds, $renewal, $data, $cellId, $pStart, &$updatedCount) {
-            // Update the row being edited
+
             $renewal->update($data);
             $updatedCount++;
 
             if (!$applyToCell) return;
 
-            // Propagate to other PENDING rows (but DO NOT overwrite relationship_to_deceased)
+
             $siblings = Renewal::whereIn('slot_id', $slotIds)
                 ->where('id', '!=', $renewal->id)
                 ->where('status', 'pending')
@@ -180,7 +180,7 @@ class RenewalPermitController extends Controller
                     'requesting_party'         => $data['requesting_party'],
                     'applicant_address'        => $data['applicant_address'],
                     'contact'                  => $data['contact'],
-                    // leave relationship_to_deceased as-is (per-occupant)
+
                     'date_applied'             => $data['date_applied'],
                     'renewal_start'            => $data['renewal_start'],
                     'renewal_end'              => $data['renewal_end'],
@@ -355,21 +355,29 @@ class RenewalPermitController extends Controller
             $user = auth()->user();
             $username = $user?->username ?? trim(($user->fname ?? '').' '.($user->lname ?? '')) ?: null;
 
-            ActionLog::create([
-                'user_id'     => $user?->id,
-                'username'    => $username,
-                'action'      => 'renewal.approved',
-                'target_type' => Renewal::class,
-                'target_id'   => $renewal->id,
-                'happened_at' => Carbon::parse($data['or_issued_at'])->startOfDay(),
-                'details'     => [
-                    'or_number' => $data['or_number'],
-                    'period'    => [
-                        'start' => optional($renewal->renewal_start)->toDateString(),
-                        'end'   => optional($renewal->renewal_end)->toDateString(),
-                    ],
-                ],
-            ]);
+          ActionLog::create([
+    'user_id'     => $user?->id,
+    'username'    => $username,
+    'action'      => 'renewal.approved',
+    'target_type' => Renewal::class,
+    'target_id'   => $renewal->id,
+    'happened_at' => \Carbon\Carbon::parse($data['or_issued_at'])->startOfDay(),
+    'details'     => [
+        'or_number' => $data['or_number'],
+        'period'    => [
+            'start' => optional($renewal->renewal_start)->toDateString(),
+            'end'   => optional($renewal->renewal_end)->toDateString(),
+        ],
+
+        'deceased'  => $renewal->deceased?->full_name ?? (
+            $renewal->deceased?->last_name
+                ? ($renewal->deceased->last_name.', '.($renewal->deceased->first_name ?? ''))
+                : null
+        ),
+        'location'  => $renewal->buried_at,
+    ],
+]);
+
         });
 
         return back()->with('success', 'Renewal approved.');
@@ -377,19 +385,19 @@ class RenewalPermitController extends Controller
 
     public function deny(Renewal $renewal)
     {
-        abort_if($renewal->status!=='pending',400,'Already processed');
+        abort_if($renewal->status !== 'pending', 400, 'Already processed');
 
         DB::transaction(function () use ($renewal) {
             $renewal->update([
-                'status'=>'denied',
-                'remarks'=>trim(($renewal->remarks ?: '') . ' Denied '.now()),
+                'status' => 'denied',
+                'remarks' => trim(($renewal->remarks ?: '') . ' Denied ' . now()),
             ]);
 
-            $renewal->slot()->update(['status'=>'occupied']);
+            $renewal->slot()->update(['status' => 'occupied']);
 
 
             $user = auth()->user();
-            $username = $user?->username ?? trim(($user->fname ?? '').' '.($user->lname ?? '')) ?: null;
+            $username = $user?->username ?? trim(($user->fname ?? '') . ' ' . ($user->lname ?? '')) ?: null;
 
             ActionLog::create([
                 'user_id'     => $user?->id,
@@ -399,7 +407,14 @@ class RenewalPermitController extends Controller
                 'target_id'   => $renewal->id,
                 'happened_at' => now(),
                 'details'     => [
-                    'remarks' => $renewal->remarks,
+                    'remarks'  => $renewal->remarks,
+
+                    'deceased' => $renewal->deceased?->full_name ?? (
+                        $renewal->deceased?->last_name
+                        ? ($renewal->deceased->last_name . ', ' . ($renewal->deceased->first_name ?? ''))
+                        : null
+                    ),
+                    'location' => $renewal->buried_at,
                 ],
             ]);
         });
@@ -454,12 +469,16 @@ class RenewalPermitController extends Controller
                 'target_type' => Renewal::class,
                 'target_id'   => $renewal->id,
                 'happened_at' => Carbon::parse($data['or_issued_at'])->startOfDay(),
-                'details'     => [
+                'details' => [
                     'batch'       => true,
                     'count'       => $batch->count(),
                     'renewal_ids' => $batch->pluck('id')->values(),
-                    'or_number'   => $data['or_number'],
+                    'or_number'   => $data['or_number'] ?? null,
+
+                    'deceased'    => $renewal->deceased?->full_name ?? null,
+                    'location'    => $renewal->buried_at ?? null,
                 ],
+
             ]);
         });
 
@@ -508,11 +527,16 @@ class RenewalPermitController extends Controller
                 'target_type' => Renewal::class,
                 'target_id'   => $renewal->id,
                 'happened_at' => now(),
-                'details'     => [
+                'details' => [
                     'batch'       => true,
                     'count'       => $batch->count(),
                     'renewal_ids' => $batch->pluck('id')->values(),
+                    'or_number'   => $data['or_number'] ?? null,
+
+                    'deceased'    => $renewal->deceased?->full_name ?? null,
+                    'location'    => $renewal->buried_at ?? null,
                 ],
+
             ]);
         });
 

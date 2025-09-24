@@ -54,6 +54,7 @@ class ReservationBrowserController extends Controller
             'deceased_first_name'   => $reservation->deceased?->first_name,
             'deceased_middle_name'  => $reservation->deceased?->middle_name,
             'deceased_last_name'    => $reservation->deceased?->last_name,
+            'deceased_address_before_death' => $reservation->deceased?->address_before_death,
             'deceased_suffix'       => $reservation->deceased?->suffix,
             'date_of_birth'         => $reservation->deceased?->dob_ymd,
             'date_of_death'         => $reservation->deceased?->dod_ymd,
@@ -90,6 +91,7 @@ class ReservationBrowserController extends Controller
             'deceased_first_name'      => ['nullable','string','max:255'],
             'deceased_middle_name'     => ['nullable','string','max:255'],
             'deceased_last_name'       => ['nullable','string','max:255'],
+            'deceased_address_before_death' => ['nullable','string','max:255'],
             'deceased_suffix'          => ['nullable','string','max:50'],
             'date_of_birth'            => ['required','date_format:Y-m-d'],
             'date_of_death'            => ['required','date_format:Y-m-d','after_or_equal:date_of_birth'],
@@ -158,6 +160,7 @@ class ReservationBrowserController extends Controller
                     'suffix'        => $decSuf,
                     'date_of_birth' => Carbon::parse($v['date_of_birth'])->format('Y-m-d'),
                     'date_of_death' => Carbon::parse($v['date_of_death'])->format('Y-m-d'),
+                    'address_before_death' => $v['deceased_address_before_death'] ?? $reservation->deceased->address_before_death,
                 ]);
             }
         });

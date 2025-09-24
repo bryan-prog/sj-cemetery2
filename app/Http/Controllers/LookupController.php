@@ -6,6 +6,7 @@ use App\Models\BurialSite;
 use App\Models\Level;
 use Illuminate\Http\Request;
 use App\Models\{Family, Reservation, Slot};
+use Carbon\Carbon;
 
 class LookupController extends Controller
 {
@@ -22,22 +23,21 @@ class LookupController extends Controller
     }
 
     public function levelSlotsProgress(Level $level)
-{
-    $busyStatuses = ['occupied','reserved','renewal_pending','exhumation_pending','for_penalty'];
+    {
+        $busyStatuses = ['occupied','reserved','renewal_pending','exhumation_pending','for_penalty'];
 
-    $total = Slot::whereHas('cell', fn($q) => $q->where('level_id', $level->id))->count();
+        $total = Slot::whereHas('cell', fn($q) => $q->where('level_id', $level->id))->count();
 
-    $busy  = Slot::whereHas('cell', fn($q) => $q->where('level_id', $level->id))
-                 ->whereIn('status', $busyStatuses)
-                 ->count();
+        $busy  = Slot::whereHas('cell', fn($q) => $q->where('level_id', $level->id))
+                     ->whereIn('status', $busyStatuses)
+                     ->count();
 
-    return response()->json([
-        'total'   => $total,
-        'busy'    => $busy,
-        'percent' => $total ? round(($busy / $total) * 100) : 0,
-    ]);
-}
-
+        return response()->json([
+            'total'   => $total,
+            'busy'    => $busy,
+            'percent' => $total ? round(($busy / $total) * 100) : 0,
+        ]);
+    }
 
     public function searchFamilies(Request $request)
     {
@@ -60,6 +60,8 @@ class LookupController extends Controller
         if (mb_strlen($q) < 2) return response()->json([]);
 
 
+        $limitEach = 25;
+
         $families = Family::query()
             ->select('id','first_name','middle_name','last_name','suffix','contact_no','address')
             ->where(function($w) use ($q) {
@@ -68,7 +70,7 @@ class LookupController extends Controller
                   ->orWhere('middle_name', 'like', "%{$q}%")
                   ->orWhere('address', 'like', "%{$q}%");
             })
-            ->limit(25)
+            ->limit($limitEach)
             ->get();
 
         $familyIdsByApplicant = Reservation::query()
@@ -91,16 +93,46 @@ class LookupController extends Controller
         $families2 = Family::query()
             ->select('id','first_name','middle_name','last_name','suffix','contact_no','address')
             ->whereIn('id', $familyIdsByApplicant)
-            ->limit(25)
+            ->limit($limitEach)
             ->get();
 
         $merged = $families->concat($families2)->unique('id')->values();
 
-        $rows = $merged->map(fn($f) => $this->decorateFamilyRow($f, $q))->values();
+        $rowsCol = $merged->map(fn($f) => $this->decorateFamilyRow($f, $q))->values();
 
-        return response()->json($rows);
+
+        $pageParam    = $request->query('page');
+        $perPageParam = $request->query('per_page');
+
+        if ($pageParam !== null || $perPageParam !== null) {
+            $page    = max(1, (int) $pageParam ?: 1);
+            $perPage = max(5, min(50, (int) $perPageParam ?: 10));
+
+            $total    = $rowsCol->count();
+            $lastPage = (int) ceil($total / $perPage);
+            $offset   = ($page - 1) * $perPage;
+
+            if ($offset >= $total && $total > 0) {
+
+                $page   = $lastPage;
+                $offset = ($page - 1) * $perPage;
+            }
+
+            $pageData = $rowsCol->slice($offset, $perPage)->values();
+
+            return response()->json([
+                'data' => $pageData,
+                'meta' => [
+                    'total'         => $total,
+                    'per_page'      => $perPage,
+                    'current_page'  => $page,
+                    'last_page'     => $lastPage ?: 1,
+                ],
+            ]);
+        }
+
+        return response()->json($rowsCol);
     }
-
 
     public function storeFamily(Request $request)
     {
@@ -120,9 +152,7 @@ class LookupController extends Controller
             'suffix'      => $v['suffix']      ?? null,
             'contact_no'  => $v['contact_no']  ?? null,
             'address'     => $v['address']     ?? null,
-
         ]);
-
 
         return response()->json([
             'id'          => $fam->id,
@@ -137,9 +167,7 @@ class LookupController extends Controller
 
     private function decorateFamilyRow(Family $f, ?string $needle = null): array
     {
-
         $activeCount = Reservation::active()->where('family_id', $f->id)->count();
-
 
         $lastBurial = Reservation::where('family_id', $f->id)
             ->latest('internment_sched')
@@ -186,53 +214,49 @@ class LookupController extends Controller
             'contact_no'       => $f->contact_no,
             'address'          => $f->address,
             'active_graves'    => $activeCount,
-            'last_burial_at'   => $lastBurial ? \Carbon\Carbon::parse($lastBurial)->format('Y-m-d H:i') : null,
+            'last_burial_at'   => $lastBurial ? Carbon::parse($lastBurial)->format('Y-m-d H:i') : null,
             'lot_location'     => $lotLoc,
             'default_site_id'  => $defaultSiteId,
             'default_level_id' => $defaultLevelId,
         ];
     }
 
-
     public function showFamily(Family $family)
-{
+    {
+        return response()->json([
+            'id'          => $family->id,
+            'first_name'  => $family->first_name,
+            'middle_name' => $family->middle_name,
+            'last_name'   => $family->last_name,
+            'suffix'      => $family->suffix,
+            'contact_no'  => $family->contact_no,
+            'address'     => $family->address,
+        ]);
+    }
 
-    return response()->json([
-        'id'          => $family->id,
-        'first_name'  => $family->first_name,
-        'middle_name' => $family->middle_name,
-        'last_name'   => $family->last_name,
-        'suffix'      => $family->suffix,
-        'contact_no'  => $family->contact_no,
-        'address'     => $family->address,
-    ]);
-}
+    public function updateFamily(Request $request, Family $family)
+    {
+        $v = $request->validate([
+            'last_name'   => 'required|string|max:255',
+            'first_name'  => 'nullable|string|max:255',
+            'middle_name' => 'nullable|string|max:255',
+            'suffix'      => 'nullable|string|max:50',
+            'contact_no'  => 'nullable|string|max:50',
+            'address'     => 'nullable|string|max:255',
+        ]);
 
-public function updateFamily(Request $request, Family $family)
-{
-    $v = $request->validate([
-        'last_name'   => 'required|string|max:255',
-        'first_name'  => 'nullable|string|max:255',
-        'middle_name' => 'nullable|string|max:255',
-        'suffix'      => 'nullable|string|max:50',
-        'contact_no'  => 'nullable|string|max:50',
-        'address'     => 'nullable|string|max:255',
-    ]);
+        $family->last_name   = mb_strtoupper($v['last_name']);
+        $family->first_name  = $v['first_name']  ?? null;
+        $family->middle_name = $v['middle_name'] ?? null;
+        $family->suffix      = $v['suffix']      ?? null;
+        $family->contact_no  = $v['contact_no']  ?? null;
+        $family->address     = $v['address']     ?? null;
+        $family->save();
 
-
-    $family->last_name   = mb_strtoupper($v['last_name']);
-    $family->first_name  = $v['first_name']  ?? null;
-    $family->middle_name = $v['middle_name'] ?? null;
-    $family->suffix      = $v['suffix']      ?? null;
-    $family->contact_no  = $v['contact_no']  ?? null;
-    $family->address     = $v['address']     ?? null;
-    $family->save();
-
-
-    return response()->json([
-        'ok'   => true,
-        'id'   => $family->id,
-        'msg'  => 'Family updated',
-    ]);
-}
+        return response()->json([
+            'ok'   => true,
+            'id'   => $family->id,
+            'msg'  => 'Family updated',
+        ]);
+    }
 }

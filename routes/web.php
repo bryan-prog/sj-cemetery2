@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ActionLogController;
 use App\Http\Controllers\Auth\RegisterController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -15,6 +16,7 @@ use App\Http\Controllers\ReportViewController;
 use App\Http\Controllers\ReservationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReservationBrowserController;
+
 
 
 
@@ -37,7 +39,7 @@ Route::group(['middleware' => 'prevent-back-history'], function () {
     Route::get('Homepage', [HomeController::class, 'homepage'])->name('Homepage');
 
     Route::get('logs', [HomeController::class,'logs'])->name('logs');
-    
+
     Route::get('/apply/burial', fn () => view('burial_applicant_gate'))->name('burial.apply.gate');
 
     Route::get('burial_application_form', [BurialPermitController::class, 'burial_application_form'])
@@ -219,4 +221,7 @@ Route::get('/reservations/{reservation}/permit.pdf', [ReportController::class, '
 
     Route::delete('/cells/{cell}/slots', [\App\Http\Controllers\CellSlotController::class, 'destroy'])
         ->whereNumber('cell')->name('cells.slots.destroy');
+
+   Route::get('/logs',       [ActionLogController::class, 'index'])->name('logs.index');
+   Route::post('/logs/data', [ActionLogController::class, 'data'])->name('logs.data');
 });

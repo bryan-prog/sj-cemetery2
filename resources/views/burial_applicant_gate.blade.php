@@ -59,7 +59,6 @@
       </div>
       <div class="modal-body py-5">
 
-
         <div id="stepChoice">
           <div class="row g-3">
             <div class="col-md-6">
@@ -89,7 +88,6 @@
           </div>
         </div>
 
-
         <div id="stepExisting" class="d-none">
           <div class="d-flex justify-content-between align-items-end mb-2">
             <div class="flex-grow-1 pe-2">
@@ -117,8 +115,16 @@
               <tbody><!-- filled by JS --></tbody>
             </table>
           </div>
-        </div>
 
+          <!-- Pagination (added) -->
+          <div id="famPagination" class="d-flex justify-content-between align-items-center p-2 border border-top-0 rounded-bottom" style="display:none;">
+            <small id="famPageInfo" class="text-muted"></small>
+            <nav aria-label="Families search pagination">
+              <ul id="famPageList" class="pagination pagination-sm mb-0"><!-- pages injected by JS --></ul>
+            </nav>
+          </div>
+          <!-- /Pagination -->
+        </div>
 
         <div id="stepNew" class="d-none">
           <div class="d-flex justify-content-between align-items-center mb-2">
@@ -260,10 +266,8 @@ $(function(){
     headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
   });
 
-
   const gate = new bootstrap.Modal(document.getElementById('applicantGateModal'));
   $('#openGate').on('click', () => gate.show());
-
   $('#applicantGateModal .modal-header .close, #applicantGateModal .modal-footer .close').on('click', () => gate.hide());
 
   $('#btnExisting').on('click', () => {
@@ -281,20 +285,29 @@ $(function(){
     $('#stepExisting, #stepNew').addClass('d-none');
     $('#stepChoice').removeClass('d-none');
     $('#familiesTable tbody').empty();
+    $('#famPagination').hide();
     $('#familySearch').val('');
     $('#newFamilyAlert').addClass('d-none').text('');
     document.getElementById('newFamilyForm').reset();
   });
 
+  // ===== Pagination state (added) =====
+  let currentQuery = '';
+  let currentPage  = 1;
+  const perPage    = 10; // tweak if you want more/less rows per page
+  // ====================================
 
   let searchTimer = null;
-  let currentQuery = '';
   $('#familySearch').on('input', function(){
     const q = $(this).val().trim();
     currentQuery = q;
     clearTimeout(searchTimer);
-    if (q.length < 2) { $('#familiesTable tbody').empty(); return; }
-    searchTimer = setTimeout(() => doSearch(q), 250);
+    if (q.length < 2) {
+      $('#familiesTable tbody').empty();
+      $('#famPagination').hide();
+      return;
+    }
+    searchTimer = setTimeout(() => { currentPage = 1; doSearch(q, currentPage); }, 250);
   });
 
   function displayFamilyName(r){
@@ -310,13 +323,27 @@ $(function(){
     return base || '—';
   }
 
-  function doSearch(q){
-    $.get(`{{ url('/api/families/search') }}`, { q }, function(rows){
+  function doSearch(q, page){
+    $.get(`{{ url('/api/families/search') }}`, { q, page, per_page: perPage }, function(resp){
       const $tb = $('#familiesTable tbody').empty();
+
+      // Supports both legacy array and new paginated object
+      let rows = [];
+      let meta = null;
+      if (Array.isArray(resp)) {
+        rows = resp;
+        $('#famPagination').hide();
+      } else if (resp && resp.data) {
+        rows = resp.data;
+        meta = resp.meta || null;
+      }
+
       if (!rows || !rows.length) {
         $tb.append('<tr><td colspan="7" class="text-center text-muted">No matches found.</td></tr>');
+        $('#famPagination').hide();
         return;
       }
+
       rows.forEach(function(r){
         const tr = `<tr>
           <td>${escapeHtml(displayFamilyName(r))}</td>
@@ -339,8 +366,77 @@ $(function(){
         </tr>`;
         $tb.append(tr);
       });
+
+      if (meta) {
+        renderPagination(meta);
+        $('#famPagination').show();
+      } else {
+        $('#famPagination').hide();
+      }
     });
   }
+
+  // Build a compact Bootstrap pagination (Prev, numeric window, Next)
+  function renderPagination(meta){
+    const $list = $('#famPageList').empty();
+    const $info = $('#famPageInfo');
+
+    const total = meta.total || 0;
+    const from  = total ? ((meta.current_page - 1) * meta.per_page + 1) : 0;
+    const to    = total ? Math.min(meta.current_page * meta.per_page, total) : 0;
+
+    $info.text(`Showing ${from}-${to} of ${total}`);
+
+    const addItem = (label, target, disabled=false, active=false) => {
+      const cls = `page-item${disabled ? ' disabled' : ''}${active ? ' active' : ''}`;
+      const href = disabled ? '#' : 'javascript:void(0)';
+      $list.append(`<li class="${cls}"><a class="page-link" href="${href}" data-page="${target}">${label}</a></li>`);
+    };
+
+    addItem('«', 'prev', meta.current_page <= 1);
+
+
+    const last = meta.last_page || 1;
+    const curr = meta.current_page || 1;
+    const win  = 7;
+    let start  = Math.max(1, curr - Math.floor(win/2));
+    let end    = Math.min(last, start + win - 1);
+    if (end - start + 1 < win) start = Math.max(1, end - win + 1);
+
+    if (start > 1) addItem('1', 1, false, curr === 1);
+    if (start > 2) addItem('…', 'gap', true);
+
+    for (let p = start; p <= end; p++) addItem(String(p), p, false, p === curr);
+
+    if (end < last - 1) addItem('…', 'gap', true);
+    if (end < last) addItem(String(last), last, false, curr === last);
+
+
+    addItem('»', 'next', curr >= last);
+  }
+
+
+  $(document).on('click', '#famPageList .page-link', function(e){
+    e.preventDefault();
+    const val = $(this).data('page');
+    if (val === 'gap') return;
+
+    if (val === 'prev') {
+      if (currentPage > 1) { currentPage -= 1; doSearch(currentQuery, currentPage); }
+      return;
+    }
+    if (val === 'next') {
+      const lastText = $('#famPageList .page-item').eq(-2).text();
+      currentPage += 1;
+      doSearch(currentQuery, currentPage);
+      return;
+    }
+    const p = parseInt(val, 10);
+    if (!isNaN(p) && p !== currentPage) {
+      currentPage = p;
+      doSearch(currentQuery, currentPage);
+    }
+  });
 
   $(document).on('click', '.use-family', function(){
     const id    = $(this).data('id');
@@ -353,7 +449,6 @@ $(function(){
 
     window.location = `{{ route('burial_application_form') }}?${params.toString()}`;
   });
-
 
   $('#newFamilyForm').on('submit', function(e){
     e.preventDefault();
@@ -378,16 +473,11 @@ $(function(){
     });
   });
 
-
   const editModal    = new bootstrap.Modal(document.getElementById('editFamilyModal'));
   const successModal = new bootstrap.Modal(document.getElementById('editSuccessModal'));
 
-
   $('#editFamilyModal .modal-header .close, #editFamilyModal .modal-footer .close').on('click', () => editModal.hide());
-
-
   $('#editSuccessModal .modal-footer .btn-success, #editSuccessModal .modal-header .close').on('click', () => successModal.hide());
-
 
   $(document).on('click', '.edit-family', function(){
     const id = $(this).data('id');
@@ -407,7 +497,6 @@ $(function(){
       alert('Failed to load applicant details.');
     });
   });
-
 
   $('#saveEditFamily').on('click', function(){
     const id = $('#ef_id').val();
@@ -437,9 +526,8 @@ $(function(){
 
 
       if (currentQuery && currentQuery.length >= 2) {
-        doSearch(currentQuery);
+        doSearch(currentQuery, currentPage);
       }
-
 
       editModal.hide();
       setTimeout(() => successModal.show(), 250);

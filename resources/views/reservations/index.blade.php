@@ -204,6 +204,14 @@
               <input id="rvDecSuffix" name="deceased_suffix" class="form-control" disabled>
             </div>
           </div>
+      <div class="form-row">
+            <div class="form-group col-12">
+                <label class="form-control-label">
+                    <img src="https://img.icons8.com/doodle/20/address.png" /> Address Before Death
+                </label>
+                <input id="rvDecAddr" name="deceased_address_before_death" class="form-control" disabled>
+            </div>
+        </div>
           <div class="form-row">
             <div class="form-group col-md-3">
               <label class="form-control-label">
@@ -539,6 +547,7 @@
       $('#rvDecMiddle').val(r.deceased_middle_name || '');
       $('#rvDecLast').val(r.deceased_last_name || '');
       $('#rvDecSuffix').val(r.deceased_suffix || '');
+      $('#rvDecAddr').val(r.deceased_address_before_death || '');
       $('#rvDob').val(toDateInput(r.date_of_birth));
       $('#rvDod').val(toDateInput(r.date_of_death));
 
@@ -599,6 +608,7 @@
         deceased_middle_name: $('#rvDecMiddle').val(),
         deceased_last_name: $('#rvDecLast').val(),
         deceased_suffix: $('#rvDecSuffix').val(),
+        deceased_address_before_death: $('#rvDecAddr').val(),
         date_of_birth: $('#rvDob').val(),
         date_of_death: $('#rvDod').val(),
 

@@ -236,7 +236,10 @@
                 <tr data-id="{{ $renewal->id }}">
                   <td class="cell-applicant">{{ $renewal->requesting_party }}</td>
                   <td class="cell-rel">{{ $renewal->relationship_to_deceased ?? '—' }}</td>
-                  <td class="cell-deceased">{{ $renewal->deceased_attrs['name_of_deceased'] ?? '—' }}</td>
+                <td class="cell-deceased">
+  {{ $renewal->deceased?->full_name
+     ?? ($renewal->deceased?->last_name ? ($renewal->deceased->last_name . ', ' . ($renewal->deceased->first_name ?? '')) : '—') }}
+</td>
                   <td class="cell-buried">{{ $renewal->buried_at ?? '—' }}</td>
                   <td class="cell-period">{{ $periodText }}</td>
                 </tr>
