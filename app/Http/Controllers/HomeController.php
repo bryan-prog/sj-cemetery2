@@ -16,6 +16,7 @@ use App\Models\Reservation;
 use App\Models\BurialSite;
 use App\Models\Slot;
 use App\Models\Level;
+use App\Models\Deceased;
 
 
 
@@ -29,12 +30,26 @@ class HomeController extends Controller
         $this->middleware('auth');
     }
 
-
 public function homepage()
 {
     $reservationTotal  = Reservation::active()->count();
     $renewalPending    = Renewal::whereRaw('LOWER(status) = ?', ['pending'])->count();
     $exhumationPending = Exhumation::whereRaw('LOWER(status) = ?', ['pending'])->count();
+    $female_dead = Deceased::where('sex','female')->count();
+    $male_dead = Deceased::where('sex','male')->count();
+
+    $death_jan= Deceased::whereYear('date_of_death', Carbon::now()->year)->whereMonth('date_of_death', '01')->count();
+    $death_feb= Deceased::whereYear('date_of_death', Carbon::now()->year)->whereMonth('date_of_death', '02')->count();
+    $death_mar= Deceased::whereYear('date_of_death', Carbon::now()->year)->whereMonth('date_of_death', '03')->count();
+    $death_apr= Deceased::whereYear('date_of_death', Carbon::now()->year)->whereMonth('date_of_death', '04')->count();
+    $death_may= Deceased::whereYear('date_of_death', Carbon::now()->year)->whereMonth('date_of_death', '05')->count();
+    $death_jun= Deceased::whereYear('date_of_death', Carbon::now()->year)->whereMonth('date_of_death', '06')->count();
+    $death_jul= Deceased::whereYear('date_of_death', Carbon::now()->year)->whereMonth('date_of_death', '07')->count();
+    $death_aug= Deceased::whereYear('date_of_death', Carbon::now()->year)->whereMonth('date_of_death', '08')->count();
+    $death_sep= Deceased::whereYear('date_of_death', Carbon::now()->year)->whereMonth('date_of_death', '09')->count();
+    $death_oct= Deceased::whereYear('date_of_death', Carbon::now()->year)->whereMonth('date_of_death', '10')->count();
+    $death_nov= Deceased::whereYear('date_of_death', Carbon::now()->year)->whereMonth('date_of_death', '11')->count();
+    $death_dec= Deceased::whereYear('date_of_death', Carbon::now()->year)->whereMonth('date_of_death', '12')->count();
 
     $overallTotal = $reservationTotal + $renewalPending + $exhumationPending;
 
@@ -83,7 +98,9 @@ public function homepage()
         'exhumationPending',
         'overallTotal',
         'renewals',
-        'levelProgress'
+        'levelProgress',
+        'female_dead','male_dead',
+        'death_jan','death_feb','death_mar','death_apr','death_may','death_jun','death_jul','death_aug','death_sep','death_oct','death_nov','death_dec',
     ));
 }
 

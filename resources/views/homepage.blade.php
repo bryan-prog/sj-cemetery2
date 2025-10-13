@@ -79,15 +79,23 @@
 <div class="container mt-5">
 
 
-  <div class="row mb-3 d-flex justify-content-end">
-    <a href="{{ route('renewals.index') }}"><button class="btn btn-success mr-2">See Renewal Requests</button></a>
-    <a href="{{ url('/exhumations/requests') }}"><button class="btn btn-primary mr-2">See Exhumation Requests</button></a>
-    <a href="{{ route('burial.apply.gate') }}" class="btn btn-danger mr-2">Apply for Burial Permit</a>
-    <a href="{{ route('reservations.index') }}"><button class="btn btn-info">See Database</button></a>
+  <div class="row mb-4 d-flex justify-content-end">
+    <div class="col">
+      <a href="{{ route('renewals.index') }}"><button class="btn btn-success btn-block">SEE RENEWAL REQUESTS</button></a>
+    </div>
+    <div class="col">
+      <a href="{{ url('/exhumations/requests') }}"><button class="btn btn-primary btn-block">SEE EXHUMATION REQUESTS</button></a>
+    </div>
+    <div class="col">
+      <a href="{{ route('burial.apply.gate') }}" class="btn btn-danger btn-block">APPLY FOR BURIAL PERMIT</a>
+    </div>
+    <div class="col">
+      <a href="{{ route('reservations.index') }}"><button class="btn btn-info btn-block">SEE DATABASE</button></a>
+    </div>
   </div>
 
   <div class="row">
-    <div class="col-xl-3 col-md-6">
+    <!-- <div class="col-xl-3 col-md-6">
       <div class="card card-stats">
         <div class="card-body">
           <div class="row">
@@ -101,9 +109,9 @@
           </div>
         </div>
       </div>
-    </div>
+    </div> -->
 
-    <div class="col-xl-3 col-md-6">
+    <div class="col-xl-4 col-md-6">
       <div class="card card-stats">
         <div class="card-body">
           <div class="row">
@@ -119,7 +127,7 @@
       </div>
     </div>
 
-    <div class="col-xl-3 col-md-6">
+    <div class="col-xl-4 col-md-6">
       <div class="card card-stats">
         <div class="card-body">
           <div class="row">
@@ -135,7 +143,7 @@
       </div>
     </div>
 
-    <div class="col-xl-3 col-md-6">
+    <div class="col-xl-4 col-md-6">
       <div class="card card-stats">
         <div class="card-body">
           <div class="row">
@@ -161,7 +169,7 @@
         <div class="card-header">
           <div class="title-wrap">
             <span class="title-dot"></span>
-            <h5 class="h3 mb-0">Slots per Apartment</h5>
+            <h5 class="h3 mb-0">Slots per Cemetery Public Apartment</h5>
           </div>
         </div>
 
@@ -202,8 +210,38 @@
       </div>
     </div>
 
+    <div class="col-xl-4">
+      <div class="card">
+        <div class="card-header">
+          <div class="row align-items-center">
+            <div class="col"><h3 class="mb-0">Total no. of deaths per month</h3></div>
+          </div>
+        </div>
+        <div class="card-body">
+          <canvas id="monthChart" class="chart-canvas"></canvas>
+        </div>
+      </div>
+    </div>
 
-    <div class="col-xl-8">
+    <div class="col-xl-4">
+      <div class="card">
+        <div class="card-header">
+          <div class="row align-items-center">
+            <div class="col"><h3 class="mb-0">Total no. of deaths per (Gender)</h3></div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="row d-flex justify-content-center">
+              <div class="chart">
+                  <canvas id="genderChart" class="" style="width:600px;"></canvas>
+              </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- <div class="col-xl-8">
       <div class="card">
         <div class="card-header border-0">
           <div class="row align-items-center">
@@ -236,10 +274,10 @@
                 <tr data-id="{{ $renewal->id }}">
                   <td class="cell-applicant">{{ $renewal->requesting_party }}</td>
                   <td class="cell-rel">{{ $renewal->relationship_to_deceased ?? '—' }}</td>
-                <td class="cell-deceased">
-  {{ $renewal->deceased?->full_name
-     ?? ($renewal->deceased?->last_name ? ($renewal->deceased->last_name . ', ' . ($renewal->deceased->first_name ?? '')) : '—') }}
-</td>
+                  <td class="cell-deceased">
+                    {{ $renewal->deceased?->full_name
+                      ?? ($renewal->deceased?->last_name ? ($renewal->deceased->last_name . ', ' . ($renewal->deceased->first_name ?? '')) : '—') }}
+                  </td>
                   <td class="cell-buried">{{ $renewal->buried_at ?? '—' }}</td>
                   <td class="cell-period">{{ $periodText }}</td>
                 </tr>
@@ -249,7 +287,7 @@
         </div>
 
       </div>
-    </div>
+    </div> -->
   </div>
 </div>
 
@@ -355,14 +393,126 @@
     </div>
   </div>
 </div>
+
+<div class="modal fade" id="successReservationModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content">
+      <div class="modal-header" style="border-bottom:0;">
+        <h5 class="modal-title" style="color:black;margin:0;">Success</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+
+      <div class="modal-body text-center">
+        <img src="https://img.icons8.com/bubbles/150/verified-account.png" alt="ok"/>
+        <p id="successReservationMessage" class="mt-2 mb-0" style="color:black;font-weight:600;text-transform:uppercase;"></p>
+      </div>
+
+      <div class="modal-footer" style="border-top:0;">
+        <a href="{{ url('/Homepage') }}" class="btn btn-success" data-bs-dismiss="modal">OK</a>
+      </div>
+    </div>
+  </div>
+</div>
 @endsection
 
 @push('scripts')
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.10/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.10/js/dataTables.bootstrap4.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+
+@if(session('success'))
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+  var msg = @json(session('success'));
+  var msgEl = document.getElementById('successReservationMessage');
+  if (msgEl) msgEl.textContent = msg || 'Reservation saved successfully!';
+
+  var el = document.getElementById('successReservationModal');
+  var modal = new bootstrap.Modal(el);
+  modal.show();
+});
+</script>
+@endif
 
 <script>
+ //LINE CHART FOR MONTH
+
+
+Chart.register(ChartDataLabels);
+    var type = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    var type_count = ["{{$death_jan}}", "{{$death_feb}}", "{{$death_mar}}", "{{$death_apr}}", "{{$death_may}}", "{{$death_jun}}", "{{$death_jul}}", "{{$death_aug}}", "{{$death_sep}}", "{{$death_oct}}", "{{$death_nov}}", "{{$death_dec}}"];
+    var bar_color = ["#800000"];
+
+    new Chart("monthChart", {
+      type: "bar",
+      data: {
+        labels: type,
+        datasets: [{
+          backgroundColor: bar_color,
+          data: type_count
+        }]
+      },
+      options: {
+        plugins: {
+          legend:{display: false},
+          datalabels: {
+            anchor: 'CENTER',
+            align: 'center',
+            color: 'white',
+            font: {
+                weight: 'bold',
+            },
+            formatter: function (value, context) {
+                // Display the actual data value
+                return value;
+            }
+          }
+        }
+      }
+    });
+</script>
+
+<script> //PIE CHART FOR GENDER
+    var type = ["Male","Female"];
+    var type_count = ["{{$male_dead}}", "{{$female_dead}}"];
+    var bar_color = ["#e76060ff", "#5f5cebff"];
+
+    new Chart("genderChart", {
+      type: "pie",
+      data: {
+        labels: type,
+        datasets: [{
+          backgroundColor: bar_color,
+          data: type_count
+        }]
+      },
+      options: {
+        plugins: {
+          datalabels: {
+            anchor: 'CENTER',
+            align: 'center',
+            color: 'white',
+            font: {
+                weight: 'bold',
+            },
+            formatter: function (value, context) {
+                // Display the actual data value
+                return value;
+            }
+          }
+        }
+      }
+    });
+</script>
+
+<script>
+
+
 $(function () {
 
   var table = $('#renewals-table').DataTable({

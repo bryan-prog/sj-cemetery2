@@ -94,6 +94,8 @@ Route::group(['middleware' => 'prevent-back-history'], function () {
 
     Route::get('/api/burial-sites', [LookupController::class, 'index']);
     Route::get('/api/burial-sites/{id}/levels', [LookupController::class, 'levels'])->whereNumber('id');
+    Route::get('/api/dashboard/series', [HomeController::class, 'dashboardSeries'])
+    ->name('dashboard.series');
 
 
     Route::get('/api/families/search', [LookupController::class, 'searchFamilies'])->name('api.families.search');

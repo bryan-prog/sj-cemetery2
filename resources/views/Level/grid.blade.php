@@ -21,6 +21,15 @@ $activeFamilyId = request()->has('family_id') && request('family_id') !== ''
     ? (int) request('family_id')
     : null;
 
+
+    $__payload = request()->except([
+  'slot_id','_token',
+
+  'transfer','reservation_id','from_slot_id','to_slot_id','curr_loc','exhum_dec_name','exhum_dod'
+]);
+
+$showSaveReservation = !request()->boolean('transfer') && !empty($__payload);
+
 if (! function_exists('slotClass')) {
     function slotClass(string $s): string {
         return match ($s) {
@@ -36,6 +45,8 @@ if (! function_exists('slotClass')) {
         };
     }
 }
+
+
 @endphp
 
 <style>
@@ -332,11 +343,13 @@ if (! function_exists('slotClass')) {
           </table>
         </div>
 
-        <button class="btn btn-success mt-3"
-                type="submit"
-                onclick="return $('#slot_id').val()?true:alert('Choose a slot first!')">
-          Save Reservation
-        </button>
+        @if($showSaveReservation)
+  <button class="btn btn-success mt-3"
+          type="submit"
+          onclick="return $('#slot_id').val()?true:alert('Choose a slot first!')">
+    Save Reservation
+  </button>
+@endif
       </div>
     </form>
   </div>
@@ -347,6 +360,52 @@ if (! function_exists('slotClass')) {
 @include('modals.slot-details')
 @include('modals.choose-site')
 
+<!-- MODAL FOR CHOOSING EXHUMATION LOCATION -->
+<div class="modal fade" id="transferChoiceModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title mb-0">
+          <img class="mr-2" src="https://img.icons8.com/doodle/30/question-mark--v1.png"/>
+          Confirm Exhumation
+        </h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="row mb-3 text-center">
+          <div class="col">
+            <img src="https://img.icons8.com/bubbles/150/question-mark.png" alt="why-quest"/>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col">
+            <p style="color:black; text-align:justify;">
+              Please select the appropriate transfer location for the exhumation. Choose <span style="color:red; font-weight:600">Inside Transfer</span> if the transfer will occur within San Juan City Cemetery.
+              Select <span style="color:red; font-weight:600">Outside Transfer</span> if the transfer will be to a location outside of San Juan City Cemetery.
+            </p>
+          </div>
+        </div>
+        <div class="row text-center">
+          <div class="col">
+            <button type="button" id="btnInsideTransfer" class="btn btn-primary">
+              Inside Transfer
+            </button>
+          </div>
+          <div class="col">
+            <button type="button" id="btnOutsideTransfer" class="btn btn-default">
+              Outside Transfer
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" data-dismiss="modal">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div class="modal fade" id="successModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-sm">
@@ -375,6 +434,12 @@ if (! function_exists('slotClass')) {
 <script>
 const ADD_SLOT_URL_TPL = @json(route('cells.slots.store',   ['cell' => '__CELL__']));
 const DEL_SLOT_URL_TPL = @json(route('cells.slots.destroy', ['cell' => '__CELL__']));
+
+
+const IN_APP_FLOW        = @json($showSaveReservation);
+const BURIAL_FORM_URL    = @json(url('/apply/burial'));
+const DEFAULT_SITE_ID    = @json($level->burial_site_id);
+const DEFAULT_LEVEL_ID   = @json($level->id);
 </script>
 
 <script>
@@ -386,6 +451,7 @@ $(function () {
     keyboard: false
   });
   const renewalM= new bootstrap.Modal(document.getElementById('renewalModal'));
+  const transferChoiceM = new bootstrap.Modal(document.getElementById('transferChoiceModal'));
   const successM= new bootstrap.Modal(document.getElementById('successModal'));
 
 
@@ -689,18 +755,29 @@ $(function () {
 
     slotM.hide();
 
-    if (confirm(
-        'Would you like to transfer remains inside the cemetery location?\n\n'
-        + 'OK = Choose burial site & level\nCancel = Specify transfer location')
-    ) {
-      $('#modal_site').val('');
-      $('#modal_level').html('<option value="">-- Select level --</option>');
-      $('#loadGridBtn').prop('disabled', true);
-      chooseM.show();
-    } else {
-      openExhumationForm('', '', false);
-    }
+   $('#tcDeceased').text($srcBox.data('deceased') || '—');
+   $('#tcCurrLoc').text($('#exhum_current_location').val() || '—');
+
+
+   transferChoiceM.show();
   });
+
+  $('#btnInsideTransfer').on('click', function () {
+  try { transferChoiceM.hide(); } catch(e){}
+
+  // Reset choose-site modal just like before
+  $('#modal_site').val('');
+  $('#modal_level').html('<option value="">-- Select level --</option>');
+  $('#loadGridBtn').prop('disabled', true);
+
+  chooseM.show(); // existing modal
+});
+
+// Outside Transfer → open the exhumation form with editable destination
+$('#btnOutsideTransfer').on('click', function () {
+  try { transferChoiceM.hide(); } catch(e){}
+  openExhumationForm('', '', false); // existing function you already have
+});
 
   $('#modal_site').on('change', function () {
     const id = $(this).val();

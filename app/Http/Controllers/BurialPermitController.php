@@ -203,7 +203,7 @@ class BurialPermitController extends Controller
             ]);
         });
 
-        return redirect()->route('burial_application_form')->with('success','Reservation saved successfully!');
+        return redirect()->route('Homepage')->with('success','Reservation saved successfully!');
     }
 
 

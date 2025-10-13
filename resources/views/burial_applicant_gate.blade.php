@@ -10,6 +10,9 @@
   span{ font-weight:600}
   p, .table{color:black !important;}
   .modal-header{border-bottom: 1PX solid #e9ecef !important;}
+      .modal-xl {
+        max-width: 1386px !important;
+    }
 </style>
 
 @section('content')
@@ -157,7 +160,11 @@
                 <label class="form-control-label"><img src="https://img.icons8.com/doodle/20/apple-phone.png" /> Contact No.</label>
                 <input type="text" name="contact_no" class="form-control" maxlength="11" placeholder="09XXXXXXXXX">
               </div>
-              <div class="col-md-8">
+              <div class="col-md-4">
+                <label class="form-control-label"><img src="https://img.icons8.com/doodle/20/newsletter.png" /> Email Address</label>
+                <input type="text" name="email" class="form-control"placeholder="sample@gmail.com">
+              </div>
+              <div class="col-md-4">
                 <label class="form-control-label"><img src="https://img.icons8.com/doodle/20/address.png"/> Address</label>
                 <input type="text" name="address" class="form-control">
               </div>
@@ -291,11 +298,11 @@ $(function(){
     document.getElementById('newFamilyForm').reset();
   });
 
-  // ===== Pagination state (added) =====
+
   let currentQuery = '';
   let currentPage  = 1;
-  const perPage    = 10; // tweak if you want more/less rows per page
-  // ====================================
+  const perPage    = 10;
+
 
   let searchTimer = null;
   $('#familySearch').on('input', function(){
@@ -359,7 +366,7 @@ $(function(){
                     data-level="${r.default_level_id || ''}">
               Select
             </button>
-            <button class="btn btn-sm btn-outline-secondary edit-family" data-id="${r.id}">
+            <button class="btn btn-sm btn-outline-danger edit-family" data-id="${r.id}">
               Edit
             </button>
           </td>

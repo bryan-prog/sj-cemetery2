@@ -42,7 +42,6 @@
         @if(request('family_id'))
           <span class="badge badge-default badge-lg align-self-center mr-2">FAMILY ID: {{ request('family_id') }}</span>
         @endif
-        <a href="{{ url('/apply/burial') }}" class="btn btn-outline-default btn-sm">Change Applicant</a>
         <a href="{{ URL('/Homepage') }}" class="btn btn-default btn-sm">Back to Home</a>
      </div>
   </div>
@@ -208,8 +207,8 @@
     <div class="row">
         <div class="col-md-6 mb-3">
             <label class="form-control-label required"><img src="https://img.icons8.com/doodle/20/safety-hat.png"/> Grave Digger</label>
-            <select id="grave_diggers_id" name="grave_diggers_id" class="form-control">
-               <option value="">----</option>
+            <select id="grave_diggers_id" name="grave_diggers_id" class="form-control" multiple>
+               <option value="" disabled>--Select can be Multiple--</option>
                @foreach($grave_diggers as $g)
                    <option value="{{ $g->id }}">{{ $g->name }}</option>
                @endforeach
@@ -420,6 +419,21 @@ $(function () {
           .attr('action', `{{ url('/') }}/levels/${levelId}/reserve`)
           .submit();
     });
+
+    const multiSelectWithoutCtrl = ( elemSelector ) => {
+  let options = [].slice.call(document.querySelectorAll(`${elemSelector} option`));
+  options.forEach(function (element) {
+      element.addEventListener("mousedown",
+          function (e) {
+              e.preventDefault();
+              element.parentElement.focus();
+              this.selected = !this.selected;
+              return false;
+          }, false );
+  });
+}
+
+multiSelectWithoutCtrl('#grave_diggers_id')
 });
 </script>
 @endsection

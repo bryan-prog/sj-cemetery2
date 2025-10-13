@@ -23,8 +23,6 @@ class Deceased extends Model
         'date_of_death',
     ];
 
-
-
     protected $appends = ['full_name', 'name_of_deceased', 'dob_ymd', 'dod_ymd'];
 
     public function getFullNameAttribute(): string
@@ -75,4 +73,8 @@ class Deceased extends Model
     {
         return $this->hasMany(Reservation::class, 'deceased_id');
     }
+
+
+
+
 }
