@@ -1,3 +1,6 @@
+/// new burial application form
+
+
 @extends('layouts.masterlayout')
 @inject('carbon','Carbon\Carbon')
 
@@ -13,21 +16,19 @@
     h4.text-red.text-uppercase{ color: #ff0000 !important; }
     body{ background-image:url(assets/img/bg_cemetery.png); }
 
-
     .is-invalid { border-color: #e3342f !important; box-shadow: 0 0 0 .2rem rgba(227,52,47,.15) !important; }
     label.required::after { content:" *"; color:#e3342f; }
-
 
     .inline-toggle { font-weight:normal; font-size:.95rem; }
 
     .toggle-group {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-.inline-toggle input[type="checkbox"] {
-  margin-right: 8px;
-}
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .inline-toggle input[type="checkbox"] {
+      margin-right: 8px;
+    }
 </style>
 
 @section('content')
@@ -52,7 +53,6 @@
     @if(session('success'))
        <div class="alert alert-success">{{ session('success') }}</div>
     @endif
-
 
     <div id="clientErrors" class="alert alert-danger d-none">
         <strong>Please review the following:</strong>
@@ -127,26 +127,41 @@
             <label class="form-control-label"><img src="https://img.icons8.com/doodle/20/apple-phone.png"/> Contact No.</label>
             <input id="applicant_contact_no" name="applicant_contact_no" class="form-control" type="text">
         </div>
+
         <div class="col">
             <label class="form-control-label required"><img src="https://img.icons8.com/stickers/20/family.png"/> Relationship to Deceased</label>
             <input id="relationship_to_deceased" name="relationship_to_deceased" class="form-control" type="text">
         </div>
     </div>
 
-    <hr class="mt-4 mb-4">
-  <h4 class="text-red text-uppercase my-3 d-flex align-items-center justify-content-between">
-  <span><u>Deceased Information</u></span>
-  <div class="toggle-group">
-    <label class="mb-0 d-flex align-items-center inline-toggle">
-      <input type="checkbox" id="sameAddressToggle">
-      Same Address
+    <div class="row mt-3">
+  <div class="col-md-6">
+    <label class="form-control-label">
+      <img src="https://img.icons8.com/doodle/20/newsletter.png"/> Email Address
     </label>
-    {{-- <label class="mb-0 d-flex align-items-center inline-toggle">
-      <input type="checkbox" id="noLapidaToggle">
-      No Lapida
-    </label> --}}
+    <input id="applicant_email"
+           name="applicant_email"
+           type="email"
+           class="form-control"
+           value="{{ old('applicant_email', request('prefill_applicant_email')) }}"
+           placeholder="sample@gmail.com">
   </div>
-</h4>
+</div>
+
+    <hr class="mt-4 mb-4">
+    <h4 class="text-red text-uppercase my-3 d-flex align-items-center justify-content-between">
+      <span><u>Deceased Information</u></span>
+      <div class="toggle-group">
+        <label class="mb-0 d-flex align-items-center inline-toggle">
+          <input type="checkbox" id="sameAddressToggle">
+          Same Address
+        </label>
+        {{-- <label class="mb-0 d-flex align-items-center inline-toggle">
+          <input type="checkbox" id="noLapidaToggle">
+          No Lapida
+        </label> --}}
+      </div>
+    </h4>
 
     <div class="row">
         <div class="col-md-3">
@@ -235,6 +250,14 @@
     </div>
    </div>
   </form>
+
+
+  <form id="saveReservationForm"
+        action="{{ route('reservations.store') }}"
+        method="POST"
+        class="d-none">
+    @csrf
+  </form>
  </div>
 </div>
 
@@ -248,8 +271,10 @@ $(function () {
         const siteId = $(this).val();
         const $lvl   = $('#level_id').empty().append('<option value="">-- Select level --</option>');
         if (!siteId) return;
+
         $.get(`{{ url('/') }}/api/burial-sites/${siteId}/levels`, function (levels) {
             levels.forEach(lvl => $lvl.append(`<option value="${lvl.id}">${lvl.level_no}</option>`));
+
             if (preselectLevelId) {
                 $('#level_id').val(preselectLevelId);
                 preselectLevelId = null;
@@ -258,14 +283,25 @@ $(function () {
     });
 
 
-    const urlParams       = new URLSearchParams(window.location.search);
-    const defaultSiteId   = urlParams.get('default_site_id');
-    const defaultLevelId  = urlParams.get('default_level_id');
+    const urlParams      = new URLSearchParams(window.location.search);
+    const defaultSiteId  = urlParams.get('default_site_id');
+    const defaultLevelId = urlParams.get('default_level_id');
+    const carriedSlotId  = urlParams.get('selected_slot_id');
+
 
     if (defaultSiteId) {
         preselectLevelId = defaultLevelId || null;
         $('#burial_site_id').val(defaultSiteId).trigger('change');
     }
+
+
+    if (carriedSlotId) {
+        $('#chooseSlot')
+          .text('Save Reservation')
+          .removeClass('btn-info')
+          .addClass('btn-success');
+    }
+
 
     @if(request('family_id'))
       $.get(`{{ url('/api/families/search') }}`, { id: '{{ request('family_id') }}' }, function(rows){
@@ -275,7 +311,6 @@ $(function () {
           $('#applicant_middle_name').val(f.middle_name || '');
           $('#applicant_last_name').val(f.last_name || '');
           $('#applicant_suffix').val(f.suffix || '');
-
           if (f.address) $('#applicant_address').val(f.address);
           if (f.contact_no) $('#applicant_contact_no').val(f.contact_no);
 
@@ -302,10 +337,7 @@ $(function () {
         }
         hideClientErrors();
     });
-
-    $('#applicant_address').on('input', function(){
-        syncDeceasedAddressFromApplicant();
-    });
+    $('#applicant_address').on('input', function(){ syncDeceasedAddressFromApplicant(); });
 
 
     function setNoLapida(on) {
@@ -322,31 +354,23 @@ $(function () {
         const $dod    = $('#date_of_death');
 
         if (on) {
-
             $first.val('NO LAPIDA').prop('readonly', true);
             [$middle,$last,$suffix].forEach($i => $i.prop('readonly', true).val(''));
-
             [$sex,$dob,$dod].forEach($i => $i.prop('disabled', true).val(''));
-
             $addr.prop('readonly', true);
         } else {
-
             [$first,$middle,$last,$suffix].forEach($i => $i.prop('readonly', false).val(''));
             $addr.prop('readonly', $('#sameAddressToggle').is(':checked'));
             if (!$('#sameAddressToggle').is(':checked')) $addr.val('');
             [$sex,$dob,$dod].forEach($i => $i.prop('disabled', false).val(''));
         }
-
         hideClientErrors();
     }
-    $('#noLapidaToggle').on('change', function () {
-        setNoLapida($(this).is(':checked'));
-    });
+    $('#noLapidaToggle').on('change', function () { setNoLapida($(this).is(':checked')); });
 
 
     function clearInvalids() { $('.is-invalid').removeClass('is-invalid'); }
     function markInvalid(selector) { $(selector).addClass('is-invalid'); }
-
     function hideClientErrors() {
         $('#clientErrors').addClass('d-none');
         $('#clientErrorsList').empty();
@@ -364,23 +388,18 @@ $(function () {
         const errors = [];
         const noLapida = $('#no_lapida').val() === '1';
 
-
         if (!$('#date_applied').val()) { errors.push('Date Applied is required.'); markInvalid('#date_applied'); }
         if (!$('#internment_sched').val()) { errors.push('Internment Schedule is required (YYYY-MM-DDThh:mm).'); markInvalid('#internment_sched'); }
 
-
         if (!$('#burial_site_id').val()) { errors.push('Burial Site is required.'); markInvalid('#burial_site_id'); }
         if (!$('#level_id').val()) { errors.push('Level is required.'); markInvalid('#level_id'); }
-
 
         if (!$('#applicant_first_name').val()?.trim()) { errors.push('Applicant First Name is required.'); markInvalid('#applicant_first_name'); }
         if (!$('#applicant_last_name').val()?.trim())  { errors.push('Applicant Last Name is required.'); markInvalid('#applicant_last_name'); }
         if (!$('#relationship_to_deceased').val()?.trim()) { errors.push('Relationship to Deceased is required.'); markInvalid('#relationship_to_deceased'); }
 
-
         if (!$('#grave_diggers_id').val()) { errors.push('Grave Digger is required.'); markInvalid('#grave_diggers_id'); }
         if (!$('#verifiers_id').val())     { errors.push('Verifier is required.');     markInvalid('#verifiers_id'); }
-
 
         if (!noLapida) {
             if (!$('#deceased_first_name').val()?.trim()) { errors.push('Deceased First Name is required (or toggle No Lapida).'); markInvalid('#deceased_first_name'); }
@@ -397,7 +416,6 @@ $(function () {
                 markInvalid('#date_of_birth'); markInvalid('#date_of_death');
             }
         } else {
-
             if (!$('#deceased_first_name').val()) $('#deceased_first_name').val('NO LAPIDA');
         }
 
@@ -408,10 +426,63 @@ $(function () {
         return errors;
     }
 
+
     $('#chooseSlot').on('click', function () {
         hideClientErrors();
         const errors = validateFormBeforeProceed();
         if (errors.length) { showClientErrors(errors); return; }
+
+        if (carriedSlotId) {
+
+            const $post = $('#saveReservationForm');
+
+
+            $post.find('input:not([name="_token"])').remove();
+
+            const add = (name, val) => {
+                if (Array.isArray(val)) {
+                    val.forEach(v => $post.append($('<input>', { type:'hidden', name: name+'[]', value: v })));
+                } else {
+                    $post.append($('<input>', { type:'hidden', name, value: val ?? '' }));
+                }
+            };
+
+            add('no_lapida',            $('#no_lapida').val());
+            add('deceased_first_name',  $('#deceased_first_name').val());
+            add('deceased_middle_name', $('#deceased_middle_name').val());
+            add('deceased_last_name',   $('#deceased_last_name').val());
+            add('deceased_suffix',      $('#deceased_suffix').val());
+            add('address_before_death', $('#address_before_death').val());
+            add('date_of_birth',        $('#date_of_birth').val());
+            add('date_of_death',        $('#date_of_death').val());
+            add('sex',                  $('#sex').val());
+
+            add('level_id',             $('#level_id').val());
+            add('slot_id',              carriedSlotId);
+            add('grave_diggers_id',     $('#grave_diggers_id').val());
+            add('verifiers_id',         $('#verifiers_id').val());
+            add('burial_site_id',       $('#burial_site_id').val());
+
+            add('date_applied',         $('#date_applied').val());
+            add('internment_sched',     $('#internment_sched').val());
+
+            add('applicant_first_name', $('#applicant_first_name').val());
+            add('applicant_middle_name',$('#applicant_middle_name').val());
+            add('applicant_last_name',  $('#applicant_last_name').val());
+            add('applicant_suffix',     $('#applicant_suffix').val());
+            add('applicant_email', $('#applicant_email').val());
+
+            add('family_id',               $('input[name="family_id"]').val());
+            add('applicant_address',       $('#applicant_address').val());
+            add('applicant_contact_no',    $('#applicant_contact_no').val());
+            add('relationship_to_deceased',$('#relationship_to_deceased').val());
+            add('amount_as_per_ord',       $('#amount_as_per_ord').val());
+            add('funeral_service',         $('#funeral_service').val());
+            add('other_info',              $('#other_info').val());
+
+            $post.trigger('submit');
+            return;
+        }
 
 
         const levelId = $('#level_id').val();
@@ -420,20 +491,20 @@ $(function () {
           .submit();
     });
 
-    const multiSelectWithoutCtrl = ( elemSelector ) => {
-  let options = [].slice.call(document.querySelectorAll(`${elemSelector} option`));
-  options.forEach(function (element) {
-      element.addEventListener("mousedown",
-          function (e) {
-              e.preventDefault();
-              element.parentElement.focus();
-              this.selected = !this.selected;
-              return false;
-          }, false );
-  });
-}
 
-multiSelectWithoutCtrl('#grave_diggers_id')
+    const multiSelectWithoutCtrl = ( elemSelector ) => {
+      let options = [].slice.call(document.querySelectorAll(`${elemSelector} option`));
+      options.forEach(function (element) {
+          element.addEventListener("mousedown",
+              function (e) {
+                  e.preventDefault();
+                  element.parentElement.focus();
+                  this.selected = !this.selected;
+                  return false;
+              }, false );
+      });
+    }
+    multiSelectWithoutCtrl('#grave_diggers_id');
 });
 </script>
 @endsection

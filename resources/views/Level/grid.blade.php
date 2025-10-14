@@ -1,3 +1,4 @@
+
 @extends('layouts.masterlayout')
 @inject('carbon','Carbon\Carbon')
 
@@ -21,10 +22,8 @@ $activeFamilyId = request()->has('family_id') && request('family_id') !== ''
     ? (int) request('family_id')
     : null;
 
-
-    $__payload = request()->except([
+$__payload = request()->except([
   'slot_id','_token',
-
   'transfer','reservation_id','from_slot_id','to_slot_id','curr_loc','exhum_dec_name','exhum_dod'
 ]);
 
@@ -45,8 +44,6 @@ if (! function_exists('slotClass')) {
         };
     }
 }
-
-
 @endphp
 
 <style>
@@ -57,7 +54,6 @@ if (! function_exists('slotClass')) {
   .grid-head                    { background:#39597b!important }
   th.grid-head                  { color:#fff!important }
   .card .table th               { padding:0 2px!important }
-
 
   .slot-box {
     margin-top:5px;
@@ -82,10 +78,8 @@ if (! function_exists('slotClass')) {
     pointer-events: none;
   }
 
-
   .slot-available               { background:#c0c0c0; color:#111; font-weight:600; }
   .slot-family-reserved         { background:#2c3227; color:#ffffff; font-weight:700; }
-
   .slot-occupied                { background:#800000; color:#fff; font-weight:600; }
   .slot-exhumed                 { background:#c6f6d5; color:#22543d; font-weight:600; }
   .slot-renewal-pending         { background:#545AA7; color:#fff; font-weight:600; }
@@ -139,7 +133,6 @@ if (! function_exists('slotClass')) {
     border-radius: 1px;
     pointer-events: none;
   }
-
 
   .border-primary               { border:3px solid #0d6efd!important }
   th.grid-head                  { font-size: 1rem !important;}
@@ -226,7 +219,6 @@ if (! function_exists('slotClass')) {
               <button type="button" id="btnClear" class="btn btn-outline-dark">Clear</button>
             </div>
           </div>
-
           <div id="findMatches" class="list-group mt-2"></div>
         </div>
 
@@ -250,27 +242,52 @@ if (! function_exists('slotClass')) {
                     @endphp
                     @if($cell)
                       @php
-                        $cellFamilyId = $cell->family_id ? (int) $cell->family_id : null;
+                         $cellFamilyId = $cell->family_id ? (int) $cell->family_id : null;
 
-                        $lockedCellForApplicant = $cellFamilyId
-                            && (is_null($activeFamilyId) || $activeFamilyId !== $cellFamilyId);
+  $lockedCellForApplicant = $cellFamilyId
+      && (is_null($activeFamilyId) || $activeFamilyId !== $cellFamilyId);
 
-                        $familyOwnsCell = $cellFamilyId && $activeFamilyId && ($activeFamilyId === $cellFamilyId);
+  $familyOwnsCell = $cellFamilyId && $activeFamilyId && ($activeFamilyId === $cellFamilyId);
 
-                        $availableCount = $cell->slots->filter(fn($s) => $s->display_status === 'available')->count();
-                        $canShowPlus  = $familyOwnsCell;
-                        $canShowMinus = $familyOwnsCell && $availableCount > 0;
+  $availableCount = $cell->slots->filter(fn($s) => $s->display_status === 'available')->count();
+  $canShowPlus  = $familyOwnsCell;
+  $canShowMinus = $familyOwnsCell && $availableCount > 0;
 
-                        $nextNo = ($cell->slots->max('slot_no') ?? 0) + 1;
+  $nextNo = ($cell->slots->max('slot_no') ?? 0) + 1;
 
-                        $hasPenaltySlot = $cell->slots->contains(fn($s) => $s->display_status === 'for_penalty');
+  $slotIdsForCell = $cell->slots->pluck('id')->all();
 
-                        $slotIdsForCell = $cell->slots->pluck('id');
-                        $hasActiveRenewal = \App\Models\Renewal::whereIn('slot_id', $slotIdsForCell)
-                            ->whereIn('status',['pending','approved'])
-                            ->exists();
+  $hasPenaltySlot = $cell->slots->contains(fn($s) => $s->display_status === 'for_penalty');
 
-                        $cellPenalty = $hasPenaltySlot && !$hasActiveRenewal;
+  $hasPendingRenewal = \App\Models\Renewal::whereIn('slot_id', $slotIdsForCell)
+      ->where('status','pending')
+      ->exists();
+
+  $latestApprovedEnd = \App\Models\Renewal::whereIn('slot_id', $slotIdsForCell)
+      ->where('status','approved')
+      ->max('renewal_end');
+
+
+  $today = now()->startOfDay();
+  $cellCoverageEnd = app(\App\Support\CellCoverage::class)->coverageEndForCell($cell->id, $today);
+  if ($hasPendingRenewal) {
+      $cellState = 'renewal_pending';
+  } elseif ($cellCoverageEnd) {
+      $daysLeft = $today->diffInDays($cellCoverageEnd, false);
+      if ($daysLeft > 30) {
+          $cellState = 'occupied';
+      } elseif ($daysLeft >= 0) {
+          $cellState = 'for_renewal';
+      } else {
+          $cellState = 'for_penalty';
+      }
+  } else {
+      $cellState = null;
+  }
+
+
+  $cellPenalty = ($cellState === 'for_penalty');
+
                       @endphp
                       <td class="{{ $cellPenalty ? 'cell-penalty' : '' }}" style="padding:4px;">
                         <div class="slot-group"
@@ -279,16 +296,60 @@ if (! function_exists('slotClass')) {
 
                           @foreach($cell->slots as $slot)
                             @php
-                              $statusDb   = $slot->display_status;
-                              $isAvailish = in_array($statusDb, ['available','exhumed'], true);
-                              $statusUi   = ($lockedCellForApplicant && $isAvailish) ? 'reserved' : $statusDb;
+  $res = optional($slot->reservation);
+  $dec = $res->deceased;
+  $ren = $slot->renewals->sortByDesc('id')->first();
 
-                              $cls = slotClass($statusUi);
+  $statusDb = $slot->display_status ?? $slot->status ?? 'available';
 
-                              $res = optional($slot->reservation);
-                              $dec = $res->deceased;
-                              $ren = $slot->renewals->sortByDesc('id')->first();
-                            @endphp
+
+  if ($statusDb === 'occupied') {
+      $buriedAt = null;
+      if ($res && $res->internment_sched) {
+          $buriedAt = \Carbon\Carbon::parse($res->internment_sched)->startOfDay();
+      } elseif (!empty($slot->occupancy_start)) {
+          $buriedAt = \Carbon\Carbon::parse($slot->occupancy_start)->startOfDay();
+      }
+
+      if ($buriedAt) {
+          $today  = now()->startOfDay();
+          $dueAt  = $buriedAt->copy()->addYears(5);
+
+          if ($latestApprovedEnd) {
+              $coverageEnd = \Carbon\Carbon::parse($latestApprovedEnd)->startOfDay();
+              $daysLeft    = $today->diffInDays($coverageEnd, false);
+
+              if ($daysLeft > 30) {
+                  $statusDb = 'occupied';
+              } elseif ($daysLeft >= 0) {
+                  $statusDb = 'for_renewal';
+              } else {
+                  $statusDb = $hasPendingRenewal ? 'renewal_pending' : 'for_penalty';
+              }
+          } else {
+              $daysLeft = $today->diffInDays($dueAt, false);
+
+              if ($daysLeft > 30) {
+                  $statusDb = 'occupied';
+              } elseif ($daysLeft >= 0) {
+                  $statusDb = 'for_renewal';
+              } else {
+                  $statusDb = $hasPendingRenewal ? 'renewal_pending' : 'for_penalty';
+              }
+          }
+      }
+  }
+
+
+  if (in_array($statusDb, ['occupied','for_renewal','for_penalty','renewal_pending'], true) && $cellState) {
+      $statusDb = $cellState;
+  }
+
+
+  $isAvailish = in_array($statusDb, ['available','exhumed'], true);
+  $statusUi   = ($lockedCellForApplicant && $isAvailish) ? 'reserved' : $statusDb;
+  $cls        = slotClass($statusUi);
+@endphp
 
                             <div  class="slot-box {{ $cls }}"
                                   data-slot-id="{{ $slot->id }}"
@@ -344,12 +405,12 @@ if (! function_exists('slotClass')) {
         </div>
 
         @if($showSaveReservation)
-  <button class="btn btn-success mt-3"
-          type="submit"
-          onclick="return $('#slot_id').val()?true:alert('Choose a slot first!')">
-    Save Reservation
-  </button>
-@endif
+          <button class="btn btn-success mt-3"
+                  type="submit"
+                  onclick="return $('#slot_id').val()?true:alert('Choose a slot first!')">
+            Save Reservation
+          </button>
+        @endif
       </div>
     </form>
   </div>
@@ -360,7 +421,6 @@ if (! function_exists('slotClass')) {
 @include('modals.slot-details')
 @include('modals.choose-site')
 
-<!-- MODAL FOR CHOOSING EXHUMATION LOCATION -->
 <div class="modal fade" id="transferChoiceModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
@@ -435,8 +495,8 @@ if (! function_exists('slotClass')) {
 const ADD_SLOT_URL_TPL = @json(route('cells.slots.store',   ['cell' => '__CELL__']));
 const DEL_SLOT_URL_TPL = @json(route('cells.slots.destroy', ['cell' => '__CELL__']));
 
-
 const IN_APP_FLOW        = @json($showSaveReservation);
+const IN_TRANSFER   = @json(request()->boolean('transfer'));
 const BURIAL_FORM_URL    = @json(url('/apply/burial'));
 const DEFAULT_SITE_ID    = @json($level->burial_site_id);
 const DEFAULT_LEVEL_ID   = @json($level->id);
@@ -454,12 +514,19 @@ $(function () {
   const transferChoiceM = new bootstrap.Modal(document.getElementById('transferChoiceModal'));
   const successM= new bootstrap.Modal(document.getElementById('successModal'));
 
-
+function ensureHiddenInsideTransfer(val){
+  const $f = $('#exhumationForm');
+  let $inp = $f.find('input[name="inside_transfer"]');
+  if ($inp.length === 0) {
+    $inp = $('<input type="hidden" name="inside_transfer">').appendTo($f);
+  }
+  $inp.val(String(val));
+}
   document.addEventListener('show.bs.modal', (e) => {
-  document.querySelectorAll('.modal.show').forEach(m => {
-    if (m !== e.target) bootstrap.Modal.getInstance(m)?.hide();
+    document.querySelectorAll('.modal.show').forEach(m => {
+      if (m !== e.target) bootstrap.Modal.getInstance(m)?.hide();
+    });
   });
-});
 
   function showSuccess(msg){
     $('#successMessage').text(msg || 'Request submitted successfully.');
@@ -484,48 +551,70 @@ $(function () {
   });
 
 
-  $(document).on('click', '.slot-box', function () {
-    if ($(this).hasClass('add-slot') || $(this).hasClass('remove-slot')) return;
+ $(document).on('click', '.slot-box', function () {
+  if ($(this).hasClass('add-slot') || $(this).hasClass('remove-slot')) return;
 
-    const $box   = $(this);
-    const status = ($box.data('status') || '').toString();
-    const locked = String($box.data('locked')) === '1';
+  const $box   = $(this);
+  const status = ($box.data('status') || '').toString();
+  const locked = String($box.data('locked')) === '1';
 
-    if (locked && isAvailable(status)) { flash('This slot is reserved for another family.'); return; }
+  const isAvailable = st => (st === 'available' || st === 'exhumed');
 
-    if (picking) {
-      if (!isAvailable(status)) {
-        flash('Pick a GREY slot.');
-        return;
-      }
-
-      $('.slot-box[data-picked-transfer="1"]')
-        .removeClass('border-warning pulse')
-        .removeAttr('data-picked-transfer');
-
-      $box.addClass('border-warning pulse')
-          .attr('data-picked-transfer','1');
-
-      $('#exhumationForm input[name=to_slot_id]').val($box.data('slot-id'));
-      const destLoc = `${$box.data('apartment')} • L${$box.data('level')} R${$box.data('row')} C${$box.data('col')} S${$.trim($box.text())}`;
-      $('#current_location_field').val(destLoc).prop('readonly', true);
-
-      picking = false;
-      formM.show();
-      return;
-    }
-
-    if (!isAvailable(status)) {
-      buildDetails($box);
-      slotM.show();
-      return;
-    }
+  if (locked && isAvailable(status)) { flash('This slot is reserved for another family.'); return; }
 
 
-    $('.border-primary').removeClass('border-primary');
-    $box.addClass('border-primary');
-    $('#slot_id').val($box.data('slot-id'));
-  });
+ if (picking) {
+  if (isAvailable(status)) {
+
+    $('.slot-box[data-picked-transfer="1"]')
+      .removeClass('border-warning pulse')
+      .removeAttr('data-picked-transfer');
+
+    $box.addClass('border-warning pulse')
+        .attr('data-picked-transfer','1');
+
+    $('#exhumationForm input[name=to_slot_id]').val($box.data('slot-id'));
+    const destLoc = `${$box.data('apartment')} • L${$box.data('level')} R${$box.data('row')} C${$box.data('col')} S${$.trim($box.text())}`;
+    $('#current_location_field, #exhum_current_location').val(destLoc).prop('readonly', true);
+
+    ensureHiddenInsideTransfer(1);
+    picking = false;
+    formM.show();
+    return;
+  }
+
+
+  buildDetails($box);
+  slotM.show();
+  return;
+}
+
+
+
+  if (!IN_APP_FLOW && !IN_TRANSFER && isAvailable(status)) {
+    const qs = new URLSearchParams({
+      selected_slot_id: String($box.data('slot-id')),
+      default_site_id : String(DEFAULT_SITE_ID),
+      default_level_id: String(DEFAULT_LEVEL_ID),
+      autogate: '1',
+      autostep:  'new'
+    });
+    window.location = `{{ route('burial.apply.gate') }}?` + qs.toString();
+    return;
+  }
+
+
+  if (!isAvailable(status)) {
+    buildDetails($box);
+    slotM.show();
+    return;
+  }
+
+
+  $('.border-primary').removeClass('border-primary');
+  $box.addClass('border-primary');
+  $('#slot_id').val($box.data('slot-id'));
+});
 
   function buildDetails($b) {
     const st          = ($b.data('status') || '').toString();
@@ -635,7 +724,6 @@ $(function () {
     const isForRenewal    = (slotUiStatus === 'for_renewal');
     const hasPendingRen   = (statusRaw === 'pending');
 
-
     const canRequestRenewal    = (!hasPendingRen && (isPenalty || isForRenewal || statusRaw === 'denied'));
     const canRequestExhumation = (statusRaw !== 'pending');
 
@@ -738,6 +826,7 @@ $(function () {
     });
   });
 
+
   $(document).on('click', '.open-exhum-form', function () {
     const fromSlot = $(this).data('from-slot');
     fromSlotId    = fromSlot;
@@ -755,29 +844,25 @@ $(function () {
 
     slotM.hide();
 
-   $('#tcDeceased').text($srcBox.data('deceased') || '—');
-   $('#tcCurrLoc').text($('#exhum_current_location').val() || '—');
+    $('#tcDeceased').text($srcBox.data('deceased') || '—');
+    $('#tcCurrLoc').text($('#exhum_current_location').val() || '—');
 
-
-   transferChoiceM.show();
+    transferChoiceM.show();
   });
 
   $('#btnInsideTransfer').on('click', function () {
-  try { transferChoiceM.hide(); } catch(e){}
+    try { transferChoiceM.hide(); } catch(e){}
+    $('#modal_site').val('');
+    $('#modal_level').html('<option value="">-- Select level --</option>');
+    $('#loadGridBtn').prop('disabled', true);
+    chooseM.show();
+  });
 
-  // Reset choose-site modal just like before
-  $('#modal_site').val('');
-  $('#modal_level').html('<option value="">-- Select level --</option>');
-  $('#loadGridBtn').prop('disabled', true);
-
-  chooseM.show(); // existing modal
-});
-
-// Outside Transfer → open the exhumation form with editable destination
-$('#btnOutsideTransfer').on('click', function () {
-  try { transferChoiceM.hide(); } catch(e){}
-  openExhumationForm('', '', false); // existing function you already have
-});
+  $('#btnOutsideTransfer').on('click', function () {
+    try { transferChoiceM.hide(); } catch(e){}
+    ensureHiddenInsideTransfer(0);
+    openExhumationForm('', '', false);
+  });
 
   $('#modal_site').on('change', function () {
     const id = $(this).val();
@@ -819,25 +904,24 @@ $('#btnOutsideTransfer').on('click', function () {
     $('#exhumationForm input[name=from_slot_id]').val("{{ request('from_slot_id') }}");
   @endif
 
- $(document).on('click', '.open-renewal-form', function () {
-  const slotId = $(this).data('slot');
-  const $box   = $(`.slot-box[data-slot-id="${slotId}"]`);
-  const resId  = $box.data('reservation');
 
-  $box.closest('td').removeClass('cell-penalty');
+  $(document).on('click', '.open-renewal-form', function () {
+    const slotId = $(this).data('slot');
+    const $box   = $(`.slot-box[data-slot-id="${slotId}"]`);
+    const resId  = $box.data('reservation');
 
-  $('#renewalForm input[name=slot_id]').val(slotId);
-  $('#renewalForm input[name=reservation_id]').val(resId);
+    $box.closest('td').removeClass('cell-penalty');
 
-  const today = new Date().toISOString().substring(0,10);
-  $('#renewal_start').val(today);
-  $('#renewal_end').val(`${parseInt(today.substring(0,4))+5}${today.substring(4)}`);
+    $('#renewalForm input[name=slot_id]').val(slotId);
+    $('#renewalForm input[name=reservation_id]').val(resId);
 
+    const today = new Date().toISOString().substring(0,10);
+    $('#renewal_start').val(today);
+    $('#renewal_end').val(`${parseInt(today.substring(0,4))+5}${today.substring(4)}`);
 
-  slotM.hide();
-
-  renewalM.show();
-});
+    slotM.hide();
+    renewalM.show();
+  });
 
   $('#renewal_start').on('change', function () {
     const [y,m,d] = this.value.split('-').map(Number);
@@ -854,30 +938,20 @@ $('#btnOutsideTransfer').on('click', function () {
 
     $('#current_location_field').val(locLabel).prop('readonly', readOnly);
 
-    if (readOnly) {
-      $('#exhum_deceased_name, #exhum_date_of_death').val('');
-    }
+    if (readOnly) { $('#exhum_deceased_name, #exhum_date_of_death').val(''); }
 
     formM.show();
   }
 
-  @if(session('renewal_success'))
-    showSuccess(@json(session('renewal_success')));
-  @endif
-  @if(session('exhumation_success'))
-    showSuccess(@json(session('exhumation_success')));
-  @endif
-  @if(session('success'))
-    showSuccess(@json(session('success')));
-  @endif
+
+  @if(session('renewal_success'))  showSuccess(@json(session('renewal_success'))); @endif
+  @if(session('exhumation_success'))showSuccess(@json(session('exhumation_success')));@endif
+  @if(session('success'))           showSuccess(@json(session('success')));           @endif
 
   const qs = new URLSearchParams(window.location.search);
-  if(qs.get('renewal') === 'success'){
-    showSuccess('Renewal request submitted successfully.');
-  }
-  if(qs.get('exhumation') === 'success'){
-    showSuccess('Exhumation request submitted successfully.');
-  }
+  if(qs.get('renewal') === 'success'){ showSuccess('Renewal request submitted successfully.'); }
+  if(qs.get('exhumation') === 'success'){ showSuccess('Exhumation request submitted successfully.'); }
+
 
   const allSlots = [];
   const nameSet = new Set();
@@ -925,14 +999,17 @@ $('#btnOutsideTransfer').on('click', function () {
     }
   });
 
+
   [...document.querySelectorAll('[data-bs-toggle="tooltip"]')].forEach(el => {
     new bootstrap.Tooltip(el, { trigger: 'hover focus' });
   });
+
 
   const $dl = $('#deceasedList');
   [...nameSet].sort((a,b)=>a.localeCompare(b)).forEach(n => {
     $dl.append(`<option value="${$('<div/>').text(n).html()}"></option>`);
   });
+
 
   const $results = $('#findMatches');
   let lastMatchedIds = new Set();
@@ -1019,6 +1096,7 @@ $('#btnOutsideTransfer').on('click', function () {
     $('#btnFilter').attr('data-active','0').text('Dim non-matches');
     clearHighlights();
   });
+
 
   const urlQS = new URLSearchParams(window.location.search);
   const focusId = urlQS.get('focus_slot_id');

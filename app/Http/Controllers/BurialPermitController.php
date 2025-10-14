@@ -22,20 +22,34 @@ class BurialPermitController extends Controller
         ]);
     }
 
-    public function createGrid(Request $request, Level $level)
+       public function createGrid(Request $request, Level $level)
     {
-        $level->load('apartment', 'cells.slots.reservation.deceased');
+        // Eager-load everything the grid.blade needs, including renewals.
+        $level->load([
+            'apartment',
+            'cells.slots.reservation.deceased',
+            'cells.slots.renewals',
+        ]);
+
         $burial_sites = BurialSite::orderBy('name')->get();
         $verifiers    = Verifier::orderBy('name_of_verifier')->get();
 
         return view('Level.grid', compact('level', 'burial_sites', 'verifiers'));
     }
 
-
-
-
-     public function store(Request $request)
+    public function store(Request $request)
     {
+
+        if (is_array($request->input('grave_diggers_id'))) {
+            $arr = array_values(array_filter(
+                $request->input('grave_diggers_id'),
+                fn($v) => $v !== null && $v !== ''
+            ));
+            $request->merge([
+                'grave_diggers_id' => count($arr) ? $arr[0] : null,
+            ]);
+        }
+
         $v = $request->validate([
             'no_lapida'             => 'nullable|in:0,1',
 
@@ -47,6 +61,7 @@ class BurialPermitController extends Controller
             'date_of_birth'         => 'required_without:no_lapida|date_format:Y-m-d|nullable',
             'date_of_death'         => 'required_without:no_lapida|date_format:Y-m-d|after_or_equal:date_of_birth|nullable',
             'sex'                   => 'required_without:no_lapida|in:MALE,FEMALE|nullable',
+            'applicant_email' => 'nullable|email|max:255',
 
             'level_id'              => 'required|exists:levels,id',
             'slot_id'               => 'required|exists:slots,id',
@@ -75,12 +90,14 @@ class BurialPermitController extends Controller
             'deceased_first_name','deceased_middle_name','deceased_last_name','deceased_suffix',
             'applicant_first_name','applicant_middle_name','applicant_last_name','applicant_suffix'
         ] as $k) {
-            if (isset($v[$k])) $v[$k] = preg_replace('/\s+/', ' ', trim($v[$k]));
+            if (isset($v[$k])) {
+                $v[$k] = preg_replace('/\s+/', ' ', trim($v[$k]));
+            }
         }
 
         $noLapida = (string)($v['no_lapida'] ?? '0') === '1';
 
-        $v['date_applied'] = Carbon::parse($v['date_applied'])->format('Y-m-d');
+        $v['date_applied']     = Carbon::parse($v['date_applied'])->format('Y-m-d');
         $v['internment_sched'] = Carbon::parse(str_replace('T',' ',$v['internment_sched']))->format('Y-m-d H:i:s');
 
         if (!$noLapida) {
@@ -88,17 +105,18 @@ class BurialPermitController extends Controller
             $v['date_of_death'] = Carbon::parse($v['date_of_death'])->format('Y-m-d');
         } else {
 
-            $v['deceased_first_name'] = 'NO LAPIDA';
+            $v['deceased_first_name']  = 'NO LAPIDA';
             $v['deceased_middle_name'] = null;
-            $v['deceased_last_name'] = null;
-            $v['deceased_suffix'] = null;
-            $v['sex'] = null;
-            $v['date_of_birth'] = null;
-            $v['date_of_death'] = null;
+            $v['deceased_last_name']   = null;
+            $v['deceased_suffix']      = null;
+            $v['sex']                  = null;
+            $v['date_of_birth']        = null;
+            $v['date_of_death']        = null;
             $v['address_before_death'] = $v['address_before_death'] ?? null;
         }
 
         DB::transaction(function () use ($v) {
+
             $deceased = Deceased::create([
                 'first_name'           => $v['deceased_first_name'],
                 'middle_name'          => $v['deceased_middle_name'] ?? null,
@@ -131,27 +149,27 @@ class BurialPermitController extends Controller
 
             $cell = GraveCell::lockForUpdate()->find($slot->grave_cell_id);
 
+
             $activeRes = Reservation::active()
                 ->whereHas('slot', fn($q) => $q->where('grave_cell_id', $cell->id))
                 ->whereNotNull('family_id')
                 ->first();
 
             $cellOwnerId = $cell->family_id ?: optional($activeRes)->family_id;
-
             if ($cellOwnerId && (int)$cellOwnerId !== (int)$familyId) {
                 throw ValidationException::withMessages([
                     'slot_id' => ['This grave cell is reserved for another family. Please choose a different cell.'],
                 ]);
             }
-
             if (!$cellOwnerId) {
                 $cell->update(['family_id' => $familyId]);
             }
 
+
             $slot->update(['status' => 'occupied']);
 
 
-           $reservation =  Reservation::create([
+            $reservation = Reservation::create([
                 'level_id'                 => $v['level_id'],
                 'burial_site_id'           => $v['burial_site_id'],
                 'deceased_id'              => $deceased->id,
@@ -159,6 +177,7 @@ class BurialPermitController extends Controller
                 'verifiers_id'             => $v['verifiers_id'],
                 'slot_id'                  => $slot->id,
                 'family_id'                => $familyId,
+
 
                 'date_applied'             => $v['date_applied'],
 
@@ -169,6 +188,7 @@ class BurialPermitController extends Controller
 
                 'applicant_address'        => $v['applicant_address'] ?? null,
                 'applicant_contact_no'     => $v['applicant_contact_no'] ?? null,
+                'applicant_email' => $v['applicant_email'] ?? null,
                 'relationship_to_deceased' => $v['relationship_to_deceased'],
                 'amount_as_per_ord'        => $v['amount_as_per_ord'] ?? null,
                 'funeral_service'          => $v['funeral_service'] ?? null,
@@ -176,9 +196,9 @@ class BurialPermitController extends Controller
                 'internment_sched'         => $v['internment_sched'],
             ]);
 
-            $user = auth()->user();
-            $username = $user?->username ?? trim(($user->fname ?? '') . ' ' . ($user->lname ?? '')) ?: null;
 
+            $user     = auth()->user();
+            $username = $user?->username ?? trim(($user->fname ?? '') . ' ' . ($user->lname ?? '')) ?: null;
 
             $dec = $reservation->deceased;
             $deceasedName = $dec?->full_name
@@ -202,6 +222,7 @@ class BurialPermitController extends Controller
                 ],
             ]);
         });
+
 
         return redirect()->route('Homepage')->with('success','Reservation saved successfully!');
     }

@@ -19,7 +19,7 @@ class Reservation extends Model
         'applicant_first_name','applicant_middle_name','applicant_last_name','applicant_suffix',
         'applicant_address','applicant_contact_no',
         'relationship_to_deceased','amount_as_per_ord','funeral_service','renewal_date',
-        'other_info','internment_sched','family_id'
+        'other_info','internment_sched','family_id', 'applicant_email'
     ];
 
     protected $appends = [

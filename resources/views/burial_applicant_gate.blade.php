@@ -1,3 +1,5 @@
+
+
 @extends('layouts.masterlayout')
 
 <style>
@@ -162,7 +164,8 @@
               </div>
               <div class="col-md-4">
                 <label class="form-control-label"><img src="https://img.icons8.com/doodle/20/newsletter.png" /> Email Address</label>
-                <input type="text" name="email" class="form-control"placeholder="sample@gmail.com">
+                <input type="email" name="applicant_email" class="form-control" value="{{ old('applicant_email', request('prefill_applicant_email')) }}" placeholder="sample@gmail.com">
+
               </div>
               <div class="col-md-4">
                 <label class="form-control-label"><img src="https://img.icons8.com/doodle/20/address.png"/> Address</label>
@@ -273,6 +276,24 @@ $(function(){
     headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
   });
 
+
+  const qs            = new URLSearchParams(window.location.search);
+  const carriedSlot   = qs.get('selected_slot_id') || '';
+  const carriedSite   = qs.get('default_site_id') || '';
+  const carriedLevel  = qs.get('default_level_id') || '';
+  const autoGate      = qs.get('autogate') === '1';
+  const autoStep      = (qs.get('autostep') || '').toLowerCase();
+
+
+  function withCarry(url) {
+    const u = new URL(url, window.location.origin);
+    if (carriedSlot)  u.searchParams.set('selected_slot_id', carriedSlot);
+    if (carriedSite)  u.searchParams.set('default_site_id', carriedSite);
+    if (carriedLevel) u.searchParams.set('default_level_id', carriedLevel);
+    return u.toString();
+  }
+
+
   const gate = new bootstrap.Modal(document.getElementById('applicantGateModal'));
   $('#openGate').on('click', () => gate.show());
   $('#applicantGateModal .modal-header .close, #applicantGateModal .modal-footer .close').on('click', () => gate.hide());
@@ -287,6 +308,7 @@ $(function(){
     $('#stepChoice').addClass('d-none');
     $('#stepExisting').addClass('d-none');
     $('#stepNew').removeClass('d-none');
+    setTimeout(()=> $('#newFamilyForm [name="last_name"]').trigger('focus'), 200);
   });
   $('#backToChoice1, #backToChoice2').on('click', () => {
     $('#stepExisting, #stepNew').addClass('d-none');
@@ -298,11 +320,25 @@ $(function(){
     document.getElementById('newFamilyForm').reset();
   });
 
+  if (autoGate) {
+    gate.show();
+    if (autoStep === 'new') {
+      $('#stepChoice').addClass('d-none');
+      $('#stepExisting').addClass('d-none');
+      $('#stepNew').removeClass('d-none');
+      setTimeout(()=> $('#newFamilyForm [name="last_name"]').trigger('focus'), 200);
+    } else if (autoStep === 'existing') {
+      $('#stepChoice').addClass('d-none');
+      $('#stepNew').addClass('d-none');
+      $('#stepExisting').removeClass('d-none');
+      setTimeout(()=> $('#familySearch').trigger('focus'), 200);
+    }
+  }
+
 
   let currentQuery = '';
   let currentPage  = 1;
   const perPage    = 10;
-
 
   let searchTimer = null;
   $('#familySearch').on('input', function(){
@@ -334,7 +370,7 @@ $(function(){
     $.get(`{{ url('/api/families/search') }}`, { q, page, per_page: perPage }, function(resp){
       const $tb = $('#familiesTable tbody').empty();
 
-      // Supports both legacy array and new paginated object
+
       let rows = [];
       let meta = null;
       if (Array.isArray(resp)) {
@@ -383,7 +419,7 @@ $(function(){
     });
   }
 
-  // Build a compact Bootstrap pagination (Prev, numeric window, Next)
+
   function renderPagination(meta){
     const $list = $('#famPageList').empty();
     const $info = $('#famPageInfo');
@@ -402,7 +438,6 @@ $(function(){
 
     addItem('«', 'prev', meta.current_page <= 1);
 
-
     const last = meta.last_page || 1;
     const curr = meta.current_page || 1;
     const win  = 7;
@@ -418,10 +453,8 @@ $(function(){
     if (end < last - 1) addItem('…', 'gap', true);
     if (end < last) addItem(String(last), last, false, curr === last);
 
-
     addItem('»', 'next', curr >= last);
   }
-
 
   $(document).on('click', '#famPageList .page-link', function(e){
     e.preventDefault();
@@ -433,7 +466,6 @@ $(function(){
       return;
     }
     if (val === 'next') {
-      const lastText = $('#famPageList .page-item').eq(-2).text();
       currentPage += 1;
       doSearch(currentQuery, currentPage);
       return;
@@ -445,17 +477,22 @@ $(function(){
     }
   });
 
+
   $(document).on('click', '.use-family', function(){
     const id    = $(this).data('id');
-    const site  = $(this).data('site');
-    const level = $(this).data('level');
+    const site  = $(this).data('site')  || carriedSite;
+    const level = $(this).data('level') || carriedLevel;
 
+    const base = `{{ route('burial_application_form') }}`;
     const params = new URLSearchParams({ family_id: id });
     if (site)  params.append('default_site_id', site);
     if (level) params.append('default_level_id', level);
+    if (carriedSlot) params.append('selected_slot_id', carriedSlot);
 
-    window.location = `{{ route('burial_application_form') }}?${params.toString()}`;
+
+    window.location = withCarry(base + '?' + params.toString());
   });
+
 
   $('#newFamilyForm').on('submit', function(e){
     e.preventDefault();
@@ -470,7 +507,15 @@ $(function(){
 
     $.post(`{{ url('/api/families') }}`, data, function(res){
       if (res && res.id) {
-        window.location = `{{ route('burial_application_form') }}?family_id=${encodeURIComponent(res.id)}`;
+        const base = `{{ route('burial_application_form') }}`;
+        const params = new URLSearchParams({ family_id: res.id });
+        if (carriedSite)  params.append('default_site_id', carriedSite);
+        if (carriedLevel) params.append('default_level_id', carriedLevel);
+        if (carriedSlot)  params.append('selected_slot_id', carriedSlot);
+       const prefillEmail = data.applicant_email || data.email;
+if (prefillEmail) params.append('prefill_applicant_email', prefillEmail);
+
+        window.location = withCarry(base + '?' + params.toString());
       } else {
         $('#newFamilyAlert').removeClass('d-none').text('Unexpected response from server.');
       }
@@ -479,6 +524,7 @@ $(function(){
       $('#newFamilyAlert').removeClass('d-none').text(msg);
     });
   });
+
 
   const editModal    = new bootstrap.Modal(document.getElementById('editFamilyModal'));
   const successModal = new bootstrap.Modal(document.getElementById('editSuccessModal'));
@@ -531,7 +577,6 @@ $(function(){
     }).done(function(){
       $('#editFamilySuccess').removeClass('d-none');
 
-
       if (currentQuery && currentQuery.length >= 2) {
         doSearch(currentQuery, currentPage);
       }
@@ -543,6 +588,7 @@ $(function(){
       $('#editFamilyAlert').removeClass('d-none').text(msg);
     });
   });
+
 
   function escapeHtml(s){
     return (s||'').toString().replace(/[&<>"'`=\/]/g, function (c) {

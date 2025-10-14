@@ -142,6 +142,7 @@ class LookupController extends Controller
             'middle_name' => 'nullable|string|max:255',
             'suffix'      => 'nullable|string|max:50',
             'contact_no'  => 'nullable|string|max:50',
+            'applicant_email'  => 'nullable|email|max:255',
             'address'     => 'nullable|string|max:255',
         ]);
 
@@ -161,6 +162,7 @@ class LookupController extends Controller
             'last_name'   => $fam->last_name,
             'suffix'      => $fam->suffix,
             'contact_no'  => $fam->contact_no,
+            'applicant_email' => $v['applicant_email'] ?? null,
             'address'     => $fam->address,
         ], 201);
     }

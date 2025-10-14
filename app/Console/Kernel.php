@@ -13,10 +13,12 @@ class Kernel extends ConsoleKernel
      * @param  \Illuminate\Console\Scheduling\Schedule  $schedule
      * @return void
      */
-    protected function schedule(Schedule $schedule)
-    {
-
-    }
+  protected function schedule(\Illuminate\Console\Scheduling\Schedule $schedule): void
+{
+    $schedule->command('renewals:send-reminders')
+        ->dailyAt('08:00')
+        ->timezone('Asia/Manila');
+}
 
     /**
      * Register the commands for the application.

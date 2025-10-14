@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Carbon\Carbon;
+use App\Models\Renewal; // <-- ADDED
 
 class ExhumationPermitController extends Controller
 {
@@ -25,7 +26,6 @@ class ExhumationPermitController extends Controller
 
     private function releaseCellIfNoActiveLocks(int $cellId): void
     {
-
         $hasNonAvailable = \App\Models\Slot::where('grave_cell_id', $cellId)
             ->whereIn('status', ['reserved','occupied','renewal_pending','exhumation_pending'])
             ->exists();
@@ -103,7 +103,6 @@ class ExhumationPermitController extends Controller
 
     public function update(Request $r, Exhumation $exhumation)
     {
-
         abort_if(!in_array($exhumation->status, ['pending','approved','exhumed'], true), 400, 'Request already finalized.');
 
         $data = $r->validate([
@@ -114,9 +113,7 @@ class ExhumationPermitController extends Controller
             'amount_as_per_ord'        => 'nullable|numeric|min:0',
             'date_applied'             => 'required|date_format:Y-m-d',
             'current_location'         => 'nullable|string|max:120',
-
         ]);
-
 
         $data['requesting_party'] = strtoupper($data['requesting_party']);
         if (isset($data['relationship_to_deceased'])) {
@@ -124,7 +121,6 @@ class ExhumationPermitController extends Controller
         }
 
         $exhumation->update($data);
-
 
         $forTransfer = $exhumation->to_slot_id
             ? ($this->locationLabel($exhumation->toSlot) ?? '—')
@@ -363,7 +359,6 @@ class ExhumationPermitController extends Controller
                 'remarks' => 'Denied ' . \Carbon\Carbon::now()->toDateTimeString(),
             ]);
 
-
             $user = auth()->user();
             $username = $user?->username ?? trim(($user->fname ?? '').' '.($user->lname ?? '')) ?: null;
 
@@ -402,9 +397,8 @@ class ExhumationPermitController extends Controller
                 'remarks' => 'Approved ' . Carbon::now()->toDateTimeString(),
             ]));
 
-
             $user = auth()->user();
-            $username = $user?->username ?? trim(($user->fname ?? '').' '.($user->lname ?? '')) ?: null;
+            $username = $user?->username ?? trim(($user->fname ?? '').' '.(($user->lname ?? ''))) ?: null;
 
             $fromLabel = $this->locationLabel($exhumation->fromSlot);
             $toLabel   = $exhumation->to_slot_id ? $this->locationLabel($exhumation->toSlot) : ($exhumation->current_location ?? null);
@@ -427,6 +421,20 @@ class ExhumationPermitController extends Controller
         return back()->with('success', 'Exhumation request approved.');
     }
 
+    /**
+     * Remove active/pending renewals for a cell (renewal is per cell, not per slot).
+     * Keeps historical/denied rows intact.
+     */
+    private function purgeCellRenewals(int $cellId): void
+    {
+        $slotIds = Slot::where('grave_cell_id', $cellId)->pluck('id');
+        if ($slotIds->isEmpty()) return;
+
+        Renewal::whereIn('slot_id', $slotIds)
+            ->whereIn('status', ['pending','approved'])
+            ->delete();
+    }
+
     private function approveOne(Exhumation $exhumation): void
     {
         $from = Slot::with('cell')->lockForUpdate()->find($exhumation->from_slot_id);
@@ -435,11 +443,9 @@ class ExhumationPermitController extends Controller
             'occupancy_end' => \Carbon\Carbon::now(),
         ]);
 
-
         $res = \App\Models\Reservation::lockForUpdate()->find($exhumation->reservation_id);
 
         if ($exhumation->to_slot_id) {
-
             $to = Slot::with('cell.level')->lockForUpdate()->find($exhumation->to_slot_id);
             $to->update([
                 'status'          => 'occupied',
@@ -450,7 +456,6 @@ class ExhumationPermitController extends Controller
             $targetLevelId = $targetLevel?->id;
             $targetSiteId  = $targetLevel?->burial_site_id;
 
-
             if ($to->cell && is_null($to->cell->family_id)) {
                 $familyId = $res?->family_id ?: ($from->cell?->family_id);
                 if ($familyId) {
@@ -459,32 +464,38 @@ class ExhumationPermitController extends Controller
             }
 
             if ($res) {
-
                 $res->update([
                     'slot_id'          => $to->id,
                     'level_id'         => $targetLevelId,
                     'burial_site_id'   => $targetSiteId,
-
                     'internment_sched' => \Carbon\Carbon::now(),
                 ]);
-
-                // If you prefer a date-only refresh (midnight), use:
-                // 'internment_sched' => \Carbon\Carbon::now()->startOfDay(),
+                // If you prefer a date-only refresh: startOfDay()
             }
 
         } else {
-
             if ($res) {
                 $res->update([
                     'slot_id'        => null,
                     'level_id'       => null,
                     'burial_site_id' => null,
-
                 ]);
             }
         }
 
-        $this->releaseCellIfNoActiveBurials($from->grave_cell_id);
+        // --- NEW: if the source cell is now empty, clear its renewals so the next family doesn't inherit coverage.
+        $sourceCellId = $from->grave_cell_id;
+
+        $hasActive = Reservation::active()
+            ->whereHas('slot', fn($q) => $q->where('grave_cell_id', $sourceCellId))
+            ->exists();
+
+        if (! $hasActive) {
+            $this->purgeCellRenewals($sourceCellId);
+        }
+        // -----------------------------------------
+
+        $this->releaseCellIfNoActiveBurials($sourceCellId);
     }
 
     private function releaseCellIfNoActiveBurials(int $cellId): void
@@ -533,7 +544,6 @@ class ExhumationPermitController extends Controller
                 ]));
             }
 
-
             $user = auth()->user();
             $username = $user?->username ?? trim(($user->fname ?? '').' '.($user->lname ?? '')) ?: null;
 
@@ -556,10 +566,8 @@ class ExhumationPermitController extends Controller
         return back()->with('success', 'Approved ' . $batch->count() . ' exhumation(s) for this cell.');
     }
 
-
     public function denyBatch(Request $request, Exhumation $exhumation)
     {
-
         $fromSlot = \App\Models\Slot::with('cell')->findOrFail($exhumation->from_slot_id);
         $sourceCellId = $fromSlot->grave_cell_id;
 
@@ -603,7 +611,6 @@ class ExhumationPermitController extends Controller
                     'remarks' => trim(($ex->remarks ?: '') . ' Denied ' . \Carbon\Carbon::now()->toDateTimeString()),
                 ]);
             }
-
 
             $user = auth()->user();
             $username = $user?->username ?? trim(($user->fname ?? '').' '.($user->lname ?? '')) ?: null;
