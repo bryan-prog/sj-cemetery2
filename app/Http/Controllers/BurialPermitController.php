@@ -13,6 +13,10 @@ use Illuminate\Validation\ValidationException;
 
 class BurialPermitController extends Controller
 {
+
+    private const BURIAL_BASE_APT_OR_RESTOS = 3000.00;
+    private const BURIAL_FEE                = 500.00;
+
     public function burial_application_form()
     {
         return view('burial_application_form', [
@@ -22,9 +26,8 @@ class BurialPermitController extends Controller
         ]);
     }
 
-       public function createGrid(Request $request, Level $level)
+    public function createGrid(Request $request, Level $level)
     {
-        // Eager-load everything the grid.blade needs, including renewals.
         $level->load([
             'apartment',
             'cells.slots.reservation.deceased',
@@ -39,17 +42,6 @@ class BurialPermitController extends Controller
 
     public function store(Request $request)
     {
-
-        if (is_array($request->input('grave_diggers_id'))) {
-            $arr = array_values(array_filter(
-                $request->input('grave_diggers_id'),
-                fn($v) => $v !== null && $v !== ''
-            ));
-            $request->merge([
-                'grave_diggers_id' => count($arr) ? $arr[0] : null,
-            ]);
-        }
-
         $v = $request->validate([
             'no_lapida'             => 'nullable|in:0,1',
 
@@ -61,11 +53,14 @@ class BurialPermitController extends Controller
             'date_of_birth'         => 'required_without:no_lapida|date_format:Y-m-d|nullable',
             'date_of_death'         => 'required_without:no_lapida|date_format:Y-m-d|after_or_equal:date_of_birth|nullable',
             'sex'                   => 'required_without:no_lapida|in:MALE,FEMALE|nullable',
-            'applicant_email' => 'nullable|email|max:255',
+            'applicant_email'       => 'nullable|email|max:255',
 
             'level_id'              => 'required|exists:levels,id',
             'slot_id'               => 'required|exists:slots,id',
-            'grave_diggers_id'      => 'required|exists:grave_diggers,id',
+
+            'grave_diggers_id'      => 'required|array|min:1|max:5',
+            'grave_diggers_id.*'    => 'distinct|exists:grave_diggers,id',
+
             'verifiers_id'          => 'required|exists:verifiers,id',
             'burial_site_id'        => 'required|exists:burial_sites,id',
 
@@ -104,7 +99,6 @@ class BurialPermitController extends Controller
             $v['date_of_birth'] = Carbon::parse($v['date_of_birth'])->format('Y-m-d');
             $v['date_of_death'] = Carbon::parse($v['date_of_death'])->format('Y-m-d');
         } else {
-
             $v['deceased_first_name']  = 'NO LAPIDA';
             $v['deceased_middle_name'] = null;
             $v['deceased_last_name']   = null;
@@ -115,7 +109,18 @@ class BurialPermitController extends Controller
             $v['address_before_death'] = $v['address_before_death'] ?? null;
         }
 
-        DB::transaction(function () use ($v) {
+        $gdIds = array_values(array_unique(array_map('intval', (array) $v['grave_diggers_id'])));
+
+
+        if (!isset($v['amount_as_per_ord']) || trim((string)$v['amount_as_per_ord']) === '') {
+            $v['amount_as_per_ord'] = number_format(
+                $this->computeBurialAmount((int)$v['burial_site_id']),
+                2, '.', ''
+            );
+        }
+
+
+        DB::transaction(function () use ($v, $gdIds) {
 
             $deceased = Deceased::create([
                 'first_name'           => $v['deceased_first_name'],
@@ -128,7 +133,6 @@ class BurialPermitController extends Controller
                 'date_of_death'        => $v['date_of_death'] ?? null,
             ]);
 
-
             $familyId = $v['family_id'] ?? null;
             if (!$familyId) {
                 $last = strtoupper(trim($v['deceased_last_name'] ?? ''));
@@ -139,7 +143,6 @@ class BurialPermitController extends Controller
                 $familyId = $family->id;
             }
 
-
             $slot = Slot::lockForUpdate()->findOrFail($v['slot_id']);
             if ($slot->status !== 'available') {
                 throw ValidationException::withMessages([
@@ -148,7 +151,6 @@ class BurialPermitController extends Controller
             }
 
             $cell = GraveCell::lockForUpdate()->find($slot->grave_cell_id);
-
 
             $activeRes = Reservation::active()
                 ->whereHas('slot', fn($q) => $q->where('grave_cell_id', $cell->id))
@@ -165,19 +167,18 @@ class BurialPermitController extends Controller
                 $cell->update(['family_id' => $familyId]);
             }
 
-
             $slot->update(['status' => 'occupied']);
 
+            $primaryGdId = $gdIds[0] ?? null;
 
             $reservation = Reservation::create([
                 'level_id'                 => $v['level_id'],
                 'burial_site_id'           => $v['burial_site_id'],
                 'deceased_id'              => $deceased->id,
-                'grave_diggers_id'         => $v['grave_diggers_id'],
+                'grave_diggers_id'         => $primaryGdId,
                 'verifiers_id'             => $v['verifiers_id'],
                 'slot_id'                  => $slot->id,
                 'family_id'                => $familyId,
-
 
                 'date_applied'             => $v['date_applied'],
 
@@ -188,7 +189,7 @@ class BurialPermitController extends Controller
 
                 'applicant_address'        => $v['applicant_address'] ?? null,
                 'applicant_contact_no'     => $v['applicant_contact_no'] ?? null,
-                'applicant_email' => $v['applicant_email'] ?? null,
+                'applicant_email'          => $v['applicant_email'] ?? null,
                 'relationship_to_deceased' => $v['relationship_to_deceased'],
                 'amount_as_per_ord'        => $v['amount_as_per_ord'] ?? null,
                 'funeral_service'          => $v['funeral_service'] ?? null,
@@ -196,6 +197,7 @@ class BurialPermitController extends Controller
                 'internment_sched'         => $v['internment_sched'],
             ]);
 
+            $reservation->graveDiggersMany()->sync($gdIds);
 
             $user     = auth()->user();
             $username = $user?->username ?? trim(($user->fname ?? '') . ' ' . ($user->lname ?? '')) ?: null;
@@ -223,13 +225,28 @@ class BurialPermitController extends Controller
             ]);
         });
 
-
         return redirect()->route('Homepage')->with('success','Reservation saved successfully!');
     }
-
-
 
     public function levels(BurialSite $site)  { return $site->levels()->select('id','level_no')->get(); }
     public function cells(Level $level)       { return $level->cells()->select('id','row_no','col_no')->get(); }
     public function slots(GraveCell $cell)    { return $cell->slots()->where('status','available')->select('id','slot_no')->get(); }
+
+
+    private function computeBurialAmount(int $burialSiteId): float
+    {
+        $site = BurialSite::find($burialSiteId);
+        $name = trim((string) ($site?->name ?? ''));
+
+
+        $isApartment = stripos($name, 'apartment') !== false;
+        $isRestos    = stripos($name, 'restos') !== false;
+
+
+        $base  = self::BURIAL_BASE_APT_OR_RESTOS;
+        $total = $base + self::BURIAL_FEE;
+
+
+        return round($total, 2);
+    }
 }

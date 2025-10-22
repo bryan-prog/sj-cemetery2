@@ -4,7 +4,6 @@ use App\Http\Controllers\ActionLogController;
 use App\Http\Controllers\Auth\RegisterController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
-
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\BurialPermitController;
@@ -70,11 +69,11 @@ Route::group(['middleware' => 'prevent-back-history'], function () {
     Route::get('list_of_users', [HomeController::class,'list_of_users'])->name('list_of_users');
     Route::get('/user_details/{id}', [HomeController::class, 'user_details'])->whereNumber('id');
     Route::post('/change_user_info', [HomeController::class, 'change_user_info']);
-
+ 
     Route::middleware(['auth'])->group(function () {
         Route::put('/profile/update', [ProfileController::class, 'update'])->name('profile.update');
     });
-
+ Route::post('/change_password', [App\Http\Controllers\HomeController::class, 'changePassword'])->name('home.change_password');
 
     Route::post('/reservations', [BurialPermitController::class, 'store'])->name('reservations.store');
 
@@ -103,20 +102,20 @@ Route::group(['middleware' => 'prevent-back-history'], function () {
 
 
 
-Route::get('/api/families/search', [LookupController::class, 'searchFamilies'])->name('api.families.search');
-Route::post('/api/families',       [LookupController::class, 'storeFamily'])->name('api.families.store');
+    Route::get('/api/families/search', [LookupController::class, 'searchFamilies'])->name('api.families.search');
+    Route::post('/api/families',       [LookupController::class, 'storeFamily'])->name('api.families.store');
 
 
-Route::get('/api/families/{family}', [LookupController::class, 'showFamily'])
-    ->whereNumber('family')
-    ->name('api.families.show');
+    Route::get('/api/families/{family}', [LookupController::class, 'showFamily'])
+        ->whereNumber('family')
+        ->name('api.families.show');
 
     Route::get('/api/levels/{level}/slots-progress', [LookupController::class, 'levelSlotsProgress'])
     ->whereNumber('level');
 
 
-Route::put('/api/families/{family}',   [LookupController::class, 'updateFamily'])->whereNumber('family')->name('api.families.update');
-Route::patch('/api/families/{family}', [LookupController::class, 'updateFamily'])->whereNumber('family');
+    Route::put('/api/families/{family}',   [LookupController::class, 'updateFamily'])->whereNumber('family')->name('api.families.update');
+    Route::patch('/api/families/{family}', [LookupController::class, 'updateFamily'])->whereNumber('family');
 
 
 
@@ -143,8 +142,14 @@ Route::patch('/api/families/{family}', [LookupController::class, 'updateFamily']
     ->name('exhumations.denyBatch');
 
 
-Route::patch('exhumations/{exhumation}', [ExhumationPermitController::class, 'update'])
-    ->name('exhumations.update')->whereNumber('exhumation');
+    Route::patch('exhumations/{exhumation}', [ExhumationPermitController::class, 'update'])
+        ->name('exhumations.update')->whereNumber('exhumation');
+
+        Route::get('/exhumations/{exhumation}/pending-by-cell', [ExhumationPermitController::class, 'pendingByCell'])
+    ->name('exhumations.pendingByCell');
+
+Route::patch('/exhumations/{exhumation}/bulk-relationships', [ExhumationPermitController::class, 'bulkRelationships'])
+    ->name('exhumations.bulkRelationships');
 
 
 
@@ -181,8 +186,9 @@ Route::patch('exhumations/{exhumation}', [ExhumationPermitController::class, 'up
 
     Route::get('/renewals/{renewal}/pending-by-cell', [RenewalPermitController::class, 'pendingByCell'])
     ->name('renewals.pendingByCell');
-Route::patch('/renewals/{renewal}/bulk-relationships', [RenewalPermitController::class, 'bulkRelationships'])
-    ->name('renewals.bulkRelationships');
+
+    Route::patch('/renewals/{renewal}/bulk-relationships', [RenewalPermitController::class, 'bulkRelationships'])
+        ->name('renewals.bulkRelationships');
 
     Route::get('/reservations/datatable', [ReservationController::class, 'datatable'])
         ->name('reservations.datatable');
@@ -202,19 +208,18 @@ Route::patch('/renewals/{renewal}/bulk-relationships', [RenewalPermitController:
     Route::get('/renewals/{renewal}/permit', [ReportController::class, 'generateRenewalPermit'])
         ->name('renewals.permit')->whereNumber('renewal');
 
-Route::get('/reservations', [\App\Http\Controllers\ReservationBrowserController::class, 'index'])->name('reservations.index');
-Route::get('/reservations/list', [\App\Http\Controllers\ReservationBrowserController::class, 'list'])->name('reservations.list');
+    Route::get('/reservations', [\App\Http\Controllers\ReservationBrowserController::class, 'index'])->name('reservations.index');
+    Route::get('/reservations/list', [\App\Http\Controllers\ReservationBrowserController::class, 'list'])->name('reservations.list');
 
 
-Route::get('/reservations/{reservation}/permit.pdf', [ReportController::class, 'burialApplication'])
-    ->name('reservations.permit.pdf')
-    ->whereNumber('reservation');
-    Route::get('/reservations/{reservation}/json', [ReservationBrowserController::class, 'show'])
-    ->whereNumber('reservation')
-    ->name('reservations.show');
+    Route::get('/reservations/{reservation}/permit.pdf', [ReportController::class, 'burialApplication'])
+        ->name('reservations.permit.pdf')
+        ->whereNumber('reservation');
+        Route::get('/reservations/{reservation}/json', [ReservationBrowserController::class, 'show'])
+        ->whereNumber('reservation')
+        ->name('reservations.show');
 
-   Route::put('/reservations/{reservation}', [ReservationBrowserController::class, 'update'])->name('reservations.update');
-
+    Route::put('/reservations/{reservation}', [ReservationBrowserController::class, 'update'])->name('reservations.update');
 
 
 
@@ -224,6 +229,8 @@ Route::get('/reservations/{reservation}/permit.pdf', [ReportController::class, '
     Route::delete('/cells/{cell}/slots', [\App\Http\Controllers\CellSlotController::class, 'destroy'])
         ->whereNumber('cell')->name('cells.slots.destroy');
 
-   Route::get('/logs',       [ActionLogController::class, 'index'])->name('logs.index');
-   Route::post('/logs/data', [ActionLogController::class, 'data'])->name('logs.data');
+    Route::get('/logs',       [ActionLogController::class, 'index'])->name('logs.index');
+    Route::post('/logs/data', [ActionLogController::class, 'data'])->name('logs.data');
+
+    Route::get('order_of_payment', [HomeController::class, 'order_of_payment'])->name('order_of_payment');
 });

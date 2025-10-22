@@ -11,7 +11,6 @@
   body            { background-image: url(assets/img/bg_cemetery.png); }
   .form-control-label, .form-control, .form-select { color:black !important; }
 
-
   .progress.progress-xs { height: 8px; }
   .list-levels { margin-top: .85rem; }
   .list-levels .list-group-item { transition: background .2s ease; padding-top:.75rem; padding-bottom:.75rem; } /* more vertical room */
@@ -21,7 +20,6 @@
 
   .card-header .title-wrap { display:flex; align-items:center; gap:.5rem; }
   .title-dot { width:10px; height:10px; border-radius:50%; background:#3b82f6; display:inline-block; }
-
 
   .apt-picker { position: relative; margin-bottom: .9rem; }
   .apt-picker .select-apt {
@@ -66,18 +64,15 @@
   }
   .apt-hint { font-size: .8rem; color:#6b7280; margin-top: .35rem; }
 
-
   .inline-spinner {
     display: inline-flex; align-items: center; gap:.35rem; margin-left: .4rem;
   }
-
 
   .row.align-items-center .col-8 .progress { margin-top: .35rem; }
 </style>
 
 @section('content')
 <div class="container mt-5">
-
 
   <div class="row mb-4 d-flex justify-content-end">
     <div class="col">
@@ -112,7 +107,7 @@
     </div> -->
 
     <div class="col-xl-4 col-md-6">
-      <div class="card card-stats">
+      <div class="card card-stats" id="reservationsCard">
         <div class="card-body">
           <div class="row">
             <div class="col">
@@ -128,7 +123,7 @@
     </div>
 
     <div class="col-xl-4 col-md-6">
-      <div class="card card-stats">
+      <div class="card card-stats" id="forRenewalCard">
         <div class="card-body">
           <div class="row">
             <div class="col">
@@ -160,9 +155,7 @@
     </div>
   </div>
 
-
   <div class="row">
-
 
     <div class="col-xl-4">
       <div class="card">
@@ -202,7 +195,6 @@
             <div class="apt-hint">Pick an apartment to see its levels.</div>
           </div>
 
-
           <ul id="levelsList" class="list-group list-group-flush list list-levels">
 
           </ul>
@@ -214,7 +206,7 @@
       <div class="card">
         <div class="card-header">
           <div class="row align-items-center">
-            <div class="col"><h3 class="mb-0">Total no. of deaths per month</h3></div>
+            <div class="col"><h3 class="mb-0" id="monthChartTitle">Total no. of deaths per month</h3></div>
           </div>
         </div>
         <div class="card-body">
@@ -227,7 +219,7 @@
       <div class="card">
         <div class="card-header">
           <div class="row align-items-center">
-            <div class="col"><h3 class="mb-0">Total no. of deaths per (Gender)</h3></div>
+            <div class="col"><h3 class="mb-0">Total no. of Deaths per (Gender)</h3></div>
           </div>
         </div>
         <div class="card-body">
@@ -239,7 +231,6 @@
         </div>
       </div>
     </div>
-
 
     <!-- <div class="col-xl-8">
       <div class="card">
@@ -290,7 +281,6 @@
     </div> -->
   </div>
 </div>
-
 
 <div class="modal fade" id="editRenewalModal" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-xl" role="document">
@@ -377,7 +367,6 @@
   </div>
 </div>
 
-
 <div class="modal fade" id="saveSuccessModal" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered" role="document">
     <div class="modal-content">
@@ -440,44 +429,76 @@ document.addEventListener('DOMContentLoaded', function () {
 @endif
 
 <script>
- //LINE CHART FOR MONTH
 
 
 Chart.register(ChartDataLabels);
-    var type = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-    var type_count = ["{{$death_jan}}", "{{$death_feb}}", "{{$death_mar}}", "{{$death_apr}}", "{{$death_may}}", "{{$death_jun}}", "{{$death_jul}}", "{{$death_aug}}", "{{$death_sep}}", "{{$death_oct}}", "{{$death_nov}}", "{{$death_dec}}"];
-    var bar_color = ["#800000"];
 
-    new Chart("monthChart", {
-      type: "bar",
-      data: {
-        labels: type,
-        datasets: [{
-          backgroundColor: bar_color,
-          data: type_count
-        }]
-      },
-      options: {
-        plugins: {
-          legend:{display: false},
-          datalabels: {
-            anchor: 'CENTER',
-            align: 'center',
-            color: 'white',
-            font: {
-                weight: 'bold',
-            },
-            formatter: function (value, context) {
-                // Display the actual data value
-                return value;
-            }
-          }
-        }
+
+var type = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+
+var deathCounts = ["{{$death_jan}}", "{{$death_feb}}", "{{$death_mar}}", "{{$death_apr}}", "{{$death_may}}", "{{$death_jun}}", "{{$death_jul}}", "{{$death_aug}}", "{{$death_sep}}", "{{$death_oct}}", "{{$death_nov}}", "{{$death_dec}}"];
+
+
+var renewalCounts = ["{{$ren_jan ?? 0}}", "{{$ren_feb ?? 0}}", "{{$ren_mar ?? 0}}", "{{$ren_apr ?? 0}}", "{{$ren_may ?? 0}}", "{{$ren_jun ?? 0}}", "{{$ren_jul ?? 0}}", "{{$ren_aug ?? 0}}", "{{$ren_sep ?? 0}}", "{{$ren_oct ?? 0}}", "{{$ren_nov ?? 0}}", "{{$ren_dec ?? 0}}"];
+
+
+var deathsBarColor   = ["#800000"];
+var renewalsBarColor = ["#2E86C1"];
+
+
+var monthChart = new Chart("monthChart", {
+  type: "bar",
+  data: {
+    labels: type,
+    datasets: [{
+      label: "Deaths",
+      backgroundColor: deathsBarColor,
+      data: deathCounts
+    }]
+  },
+  options: {
+    plugins: {
+      legend:{display: false},
+      datalabels: {
+        anchor: 'CENTER',
+        align: 'center',
+        color: 'white',
+        font: { weight: 'bold' },
+        formatter: function (value) { return value; }
       }
-    });
+    }
+  }
+});
+
+
+function showDeaths() {
+  var title = document.getElementById('monthChartTitle');
+  if (title) title.textContent = "Total no. of Deaths per month";
+  monthChart.data.datasets[0].data = deathCounts;
+  monthChart.data.datasets[0].label = "Deaths";
+  monthChart.data.datasets[0].backgroundColor = deathsBarColor;
+  monthChart.update();
+}
+
+function showRenewals() {
+  var title = document.getElementById('monthChartTitle');
+  if (title) title.textContent = "Total no. of Renewals per month";
+  monthChart.data.datasets[0].data = renewalCounts;
+  monthChart.data.datasets[0].label = "Renewals";
+  monthChart.data.datasets[0].backgroundColor = renewalsBarColor;
+  monthChart.update();
+}
+
+
+var forRenewalCard   = document.getElementById('forRenewalCard');
+var reservationsCard = document.getElementById('reservationsCard');
+
+if (forRenewalCard)   forRenewalCard.addEventListener('click', showRenewals);
+if (reservationsCard) reservationsCard.addEventListener('click', showDeaths);
 </script>
 
-<script> //PIE CHART FOR GENDER
+<script>
     var type = ["Male","Female"];
     var type_count = ["{{$male_dead}}", "{{$female_dead}}"];
     var bar_color = ["#e76060ff", "#5f5cebff"];
@@ -497,13 +518,8 @@ Chart.register(ChartDataLabels);
             anchor: 'CENTER',
             align: 'center',
             color: 'white',
-            font: {
-                weight: 'bold',
-            },
-            formatter: function (value, context) {
-                // Display the actual data value
-                return value;
-            }
+            font: { weight: 'bold' },
+            formatter: function (value) { return value; }
           }
         }
       }
@@ -511,8 +527,6 @@ Chart.register(ChartDataLabels);
 </script>
 
 <script>
-
-
 $(function () {
 
   var table = $('#renewals-table').DataTable({
@@ -671,8 +685,6 @@ $(function () {
     });
   });
 
-
-
   const $aptSel    = $('#apartmentSelect');
   const $aptClear  = $('#aptClearBtn');
   const $aptLoad   = $('#aptLoading');
@@ -683,18 +695,15 @@ $(function () {
     $aptLoad.toggleClass('d-none', !on);
   }
 
-
   setLoading(true);
   $.getJSON(`{{ url('/') }}/api/burial-sites`, function(items){
     items.forEach(i => $aptSel.append(`<option value="${i.id}">${$('<div/>').text(i.name).html()}</option>`));
   }).always(function(){ setLoading(false); });
 
-
   $aptClear.on('click', function(){
     $aptSel.val('');
     $list.empty();
   });
-
 
   $aptSel.on('change', function(){
     const id = $(this).val();
@@ -707,7 +716,6 @@ $(function () {
         $list.append(`<li class="list-group-item text-muted px-0">No levels for this apartment.</li>`);
         return;
       }
-
 
       levels.sort((a,b) => (a.level_no||0)-(b.level_no||0)).forEach((l, idx) => {
         const color = barColors[idx % barColors.length];
@@ -731,7 +739,6 @@ $(function () {
           </li>
         `);
       });
-
 
       const requests = $list.find('li').map(function(){
         const $li = $(this);

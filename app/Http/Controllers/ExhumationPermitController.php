@@ -335,6 +335,86 @@ class ExhumationPermitController extends Controller
         return back()->with('success', 'Exhumation request lodged! (Bulk where applicable)');
     }
 
+
+    public function pendingByCell(Exhumation $exhumation)
+{
+    $fromSlot = Slot::with('cell.level.apartment')->findOrFail($exhumation->from_slot_id);
+    $cellId   = (int) $fromSlot->grave_cell_id;
+
+    $slotIds = Slot::where('grave_cell_id', $cellId)->pluck('id');
+
+    $rows = Exhumation::with(['reservation.deceased','fromSlot.cell.level.apartment','toSlot.cell.level.apartment'])
+        ->whereIn('from_slot_id', $slotIds)
+        ->where('status', 'pending')
+        ->orderBy('id')
+        ->get();
+
+    $cellLabel = ($fromSlot->cell && $fromSlot->cell->level && $fromSlot->cell->level->apartment)
+        ? ($fromSlot->cell->level->apartment->name.' • L'.$fromSlot->cell->level->level_no.' R'.$fromSlot->cell->row_no.' C'.$fromSlot->cell->col_no)
+        : '—';
+
+    $items = $rows->map(function ($ex) {
+        $dec = optional($ex->reservation)->deceased;
+        $decName = $dec?->full_name
+            ?: ($dec?->last_name ? ($dec->last_name.', '.($dec->first_name ?? '')) : '—');
+
+        $origin = $this->locationLabel($ex->fromSlot) ?? '—';
+
+        return [
+            'exhumation_id' => $ex->id,
+            'deceased'      => $decName,
+            'relationship'  => $ex->relationship_to_deceased,
+            'origin'        => $origin,
+        ];
+    })->values();
+
+    return response()->json([
+        'cell_label' => $cellLabel,
+        'items'      => $items,
+    ]);
+}
+
+public function bulkRelationships(Request $r, Exhumation $exhumation)
+{
+    abort_unless($exhumation->status === 'pending', 400, 'Only pending exhumations can be batch-edited.');
+
+    $data = $r->validate([
+        'relationship_map'   => 'required|array|min:1',
+        'relationship_map.*' => 'nullable|string|max:100',
+    ]);
+
+    $fromSlot = Slot::with('cell')->findOrFail($exhumation->from_slot_id);
+    $cellId   = (int) optional($fromSlot)->grave_cell_id;
+
+    $slotIds = Slot::where('grave_cell_id', $cellId)->pluck('id');
+
+    $pendingIds = Exhumation::whereIn('from_slot_id', $slotIds)
+        ->where('status', 'pending')
+        ->pluck('id')
+        ->all();
+
+    $updates = 0;
+
+    DB::transaction(function () use ($data, $pendingIds, &$updates) {
+        foreach ($data['relationship_map'] as $exhumationId => $rel) {
+            $id = (int) $exhumationId;
+            if (!in_array($id, $pendingIds, true)) continue;
+
+            $value = (isset($rel) && trim($rel) !== '') ? strtoupper(trim($rel)) : null;
+
+            Exhumation::where('id', $id)->update([
+                'relationship_to_deceased' => $value,
+            ]);
+            $updates++;
+        }
+    });
+
+    return response()->json([
+        'message' => "Updated relationship for {$updates} pending exhumation(s).",
+        'updated' => $updates,
+    ]);
+}
+
     public function deny(Exhumation $exhumation)
     {
         abort_if($exhumation->status !== 'pending', 400, 'Request already processed.');
@@ -421,10 +501,7 @@ class ExhumationPermitController extends Controller
         return back()->with('success', 'Exhumation request approved.');
     }
 
-    /**
-     * Remove active/pending renewals for a cell (renewal is per cell, not per slot).
-     * Keeps historical/denied rows intact.
-     */
+
     private function purgeCellRenewals(int $cellId): void
     {
         $slotIds = Slot::where('grave_cell_id', $cellId)->pluck('id');
@@ -470,7 +547,7 @@ class ExhumationPermitController extends Controller
                     'burial_site_id'   => $targetSiteId,
                     'internment_sched' => \Carbon\Carbon::now(),
                 ]);
-                // If you prefer a date-only refresh: startOfDay()
+
             }
 
         } else {
@@ -483,7 +560,7 @@ class ExhumationPermitController extends Controller
             }
         }
 
-        // --- NEW: if the source cell is now empty, clear its renewals so the next family doesn't inherit coverage.
+
         $sourceCellId = $from->grave_cell_id;
 
         $hasActive = Reservation::active()
@@ -493,7 +570,7 @@ class ExhumationPermitController extends Controller
         if (! $hasActive) {
             $this->purgeCellRenewals($sourceCellId);
         }
-        // -----------------------------------------
+
 
         $this->releaseCellIfNoActiveBurials($sourceCellId);
     }

@@ -157,10 +157,13 @@
                     </div>
                 </form>
                 <hr>            
-                <form method="" action="">
+            <form method="POST" action="{{ route('home.change_password') }}">
+    @csrf
+    <input type="hidden" name="info_id" id="info_id_pass" readonly>
                     <div class="row" >
                         <div class="col">
                             <div class="form-group">
+                              
                                 <label class="form-control-label" for="change_password"><i class="fa fa-unlock-alt mr-2" aria-hidden="true"></i>Change Password</label>
                                 <input type="password" class="form-control" id="change_password" name="change_password" min="0" required >
                             </div>
@@ -225,6 +228,7 @@ $(document).ready(function(){
     console.log(data);
     $(this).addClass('selected').siblings().removeClass("selected");
     $('#info_id').val(data['id']);
+    $('#info_id_pass').val(data['id']);
     $('#last_name').val(data['lname']);
     $('#first_name').val(data['fname']);
     $('#middle_name').val(data['mname']);

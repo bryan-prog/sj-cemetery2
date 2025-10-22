@@ -64,7 +64,7 @@
             <div class="col-md-6 mt-3">
               <label class="form-control-label"><img src="https://img.icons8.com/doodle/20/refund.png"> Payment&nbsp;as&nbsp;per&nbsp;Ord.</label>
               <input type="number" step="0.01" name="amount_as_per_ord"
-                     class="form-control">
+                     class="form-control" readonly>
             </div>
 
             <div class="col-md-6 mt-3">
@@ -86,7 +86,7 @@
         </div>
 
         <div class="modal-footer">
-          <button class="btn btn-warning" type="submit">Submit&nbsp;Renewal</button>
+          <button class="btn btn-danger" type="submit">Submit&nbsp;Renewal</button>
           <button class="btn btn-secondary" data-dismiss="modal">Cancel</button>
         </div>
       </form>

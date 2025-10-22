@@ -67,9 +67,6 @@ class RegisterController extends Controller
 
          event(new Registered($user = $this->create($request->all())));
 
-         // Do NOT log the user in
-        // $this->guard()->login($user); ← REMOVE or COMMENT this line
-
         return redirect($this->redirectPath())->with('message', 'SUCCESSFULLY SAVED USER DATA!');
     }
 

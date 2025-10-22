@@ -251,7 +251,7 @@
               <label class="form-control-label">
                 <img src="https://img.icons8.com/doodle/20/refund.png"/> Amount(as per ordinance.)
               </label>
-              <input id="rvAmount" name="amount_as_per_ord" class="form-control" disabled>
+              <input id="rvAmount" name="amount_as_per_ord" class="form-control" readonly>
             </div>
             <div class="form-group col-md-5">
               <label class="form-control-label">

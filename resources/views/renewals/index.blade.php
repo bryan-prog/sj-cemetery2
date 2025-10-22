@@ -43,6 +43,7 @@
 @php
   $status = $status ?? request('status','pending');
   $showValidityCol = ($status !== 'pending');
+  $canModerate = auth()->check() && in_array(strtolower(auth()->user()->permission ?? ''), ['admin','super admin'], true);
 @endphp
 
 <div class="container mt-4">
@@ -213,7 +214,6 @@
                     <i class="fa fa-print" aria-hidden="true"></i>
                   </a>
 
-
                   @if ($rawStatus !== 'approved')
                   <button type="button"
                           class="btn btn-sm btn-info edit-renewal-btn"
@@ -225,14 +225,14 @@
 
                   @if ($r->status === 'pending')
                     @if($isMulti)
-
                       <button type="button"
-                              class="btn btn-sm btn-warning open-bulk-rel-btn"
+                              class="btn btn-sm btn-dark open-bulk-rel-btn"
                               data-id="{{ $r->id }}"
                               title="Set relationship per occupant">
                         <i class="fa fa-users" aria-hidden="true"></i>
                       </button>
 
+                      @if($canModerate)
                       <button type="button"
                               class="btn btn-sm btn-primary approve-batch-btn"
                               data-toggle="modal"
@@ -250,7 +250,9 @@
                               title="Deny all pending renewals in this cell">
                         <i class="fa fa-times-circle" aria-hidden="true"></i>
                       </button>
+                      @endif
                     @else
+                      @if($canModerate)
                       <button type="button"
                               class="btn btn-sm btn-success approve-btn"
                               data-toggle="modal"
@@ -264,6 +266,7 @@
                         @csrf
                         <button class="btn btn-sm btn-danger" title="Deny"><i class="fa fa-times" aria-hidden="true"></i></button>
                       </form>
+                      @endif
                     @endif
                   @endif
                 </td>
@@ -277,7 +280,7 @@
   </div>
 </div>
 
-
+@if($canModerate)
 <div class="modal fade" id="approveModal" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered" role="document">
     <div class="modal-content">
@@ -305,7 +308,6 @@
     </div>
   </div>
 </div>
-
 
 <div class="modal fade" id="approveBatchModal" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered" role="document">
@@ -340,7 +342,6 @@
   </div>
 </div>
 
-
 <div class="modal fade" id="denyBatchModal" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered" role="document">
     <div class="modal-content">
@@ -361,7 +362,7 @@
     </div>
   </div>
 </div>
-
+@endif
 
 <div class="modal fade" id="editRenewalModal" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-xl" role="document">
@@ -400,7 +401,7 @@
             </div>
             <div class="form-group col-md-4">
               <label class="form-control-label"><img src="https://img.icons8.com/doodle/20/refund.png"> Amount (as per ordinance)</label>
-              <input type="number" step="0.01" class="form-control er-field" name="amount_as_per_ord">
+              <input type="number" step="0.01" class="form-control er-field" name="amount_as_per_ord" readonly>
             </div>
           </div>
 
@@ -447,7 +448,6 @@
   </div>
 </div>
 
-
 <div class="modal fade" id="saveSuccessModal" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered" role="document">
     <div class="modal-content">
@@ -463,7 +463,6 @@
     </div>
   </div>
 </div>
-
 
 <div class="modal fade" id="bulkRelModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -704,7 +703,6 @@ $(function () {
       }
     });
   });
-
 
   var bulkRelAnchorId = null;
 

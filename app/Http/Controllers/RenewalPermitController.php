@@ -10,7 +10,9 @@ use Carbon\Carbon;
 
 class RenewalPermitController extends Controller
 {
-    private const PENALTY_PER_YEAR = 100.00;
+    private const PENALTY_PER_YEAR         = 50.00;
+    private const RATE_APARTMENT_PER_YEAR  = 300.00;
+    private const RATE_RESTOS_PER_YEAR     = 100.00;
 
     public function index(Request $request)
     {
@@ -109,15 +111,13 @@ class RenewalPermitController extends Controller
             'amount_as_per_ord'        => 'nullable|numeric|min:0',
             'remarks'                  => 'nullable|string|max:500',
 
-
             'apply_to_cell'            => 'sometimes|boolean',
         ]);
 
-        $slot   = Slot::with('cell')->findOrFail($renewal->slot_id);
+        $slot   = Slot::with('cell.level.apartment')->findOrFail($renewal->slot_id);
         $cellId = (int) optional($slot)->grave_cell_id;
 
         [$pStart, $pEnd] = $this->resolvePeriod($data, $cellId, Carbon::parse($data['date_applied'])->startOfDay());
-
 
         $slotIds = Slot::where('grave_cell_id', $cellId)->pluck('id');
 
@@ -144,10 +144,12 @@ class RenewalPermitController extends Controller
         }
 
         $pen = $this->computePenaltyForCell($cellId, $pStart, $renewal->id);
+        $baseAmt = $this->computeOrdinanceAmountForSlot($slot, $pStart, $pEnd);
+        $totalAmt = round($baseAmt + $pen['amount'], 2);
 
+        $data['amount_as_per_ord'] = $data['amount_as_per_ord'] ?? $totalAmt;
         $data['renewal_start'] = $pStart->toDateString();
         $data['renewal_end']   = $pEnd->toDateString();
-
 
         $existingRemarks  = trim((string)($data['remarks'] ?? $renewal->remarks ?? ''));
         $withoutPenalty   = preg_replace('/\s*Penalty:\s*\d+\s*year\(s\)\s*×.*$/i', '', $existingRemarks);
@@ -157,13 +159,14 @@ class RenewalPermitController extends Controller
         $applyToCell  = $r->boolean('apply_to_cell', true);
         $updatedCount = 0;
 
-        DB::transaction(function () use ($applyToCell, $slotIds, $renewal, $data, $cellId, $pStart, &$updatedCount) {
+        DB::transaction(function () use ($applyToCell, $slotIds, $renewal, $data, $cellId, $pStart, $pEnd, $slot, &$updatedCount) {
 
             $renewal->update($data);
             $updatedCount++;
 
             if (!$applyToCell) return;
 
+            $ordAmtForCell = $this->computeOrdinanceAmountForSlot($slot, $pStart, $pEnd);
 
             $siblings = Renewal::whereIn('slot_id', $slotIds)
                 ->where('id', '!=', $renewal->id)
@@ -175,6 +178,7 @@ class RenewalPermitController extends Controller
                 $existing = trim((string)($data['remarks'] ?? $sib->remarks ?? ''));
                 $clean    = preg_replace('/\s*Penalty:\s*\d+\s*year\(s\)\s*×.*$/i', '', $existing);
                 $penLineS = "Penalty: {$penSib['years']} year(s) × ".number_format(self::PENALTY_PER_YEAR,2,'.','')." = ".number_format($penSib['amount'],2,'.','');
+                $totalSib = round($ordAmtForCell + $penSib['amount'], 2);
 
                 $sib->update([
                     'requesting_party'         => $data['requesting_party'],
@@ -184,7 +188,7 @@ class RenewalPermitController extends Controller
                     'date_applied'             => $data['date_applied'],
                     'renewal_start'            => $data['renewal_start'],
                     'renewal_end'              => $data['renewal_end'],
-                    'amount_as_per_ord'        => $data['amount_as_per_ord'] ?? null,
+                    'amount_as_per_ord'        => $totalSib,
                     'remarks'                  => trim($clean.' '.$penLineS),
                 ]);
                 $updatedCount++;
@@ -232,7 +236,7 @@ class RenewalPermitController extends Controller
             'remarks'          => 'nullable|string|max:500',
         ]);
 
-        $seedSlot = Slot::with('cell')->findOrFail($v['slot_id']);
+        $seedSlot = Slot::with('cell.level.apartment')->findOrFail($v['slot_id']);
         $cellId   = (int) optional($seedSlot)->grave_cell_id;
         $cell     = optional($seedSlot)->cell;
 
@@ -263,9 +267,10 @@ class RenewalPermitController extends Controller
         $v['renewal_start'] = $pStart->toDateString();
         $v['renewal_end']   = $pEnd->toDateString();
 
+        $baseAmt = $this->computeOrdinanceAmountForSlot($seedSlot, $pStart, $pEnd);
         $isFamilyOwned = !is_null(optional($cell)->family_id);
 
-        DB::transaction(function () use ($v, $cellId, $isFamilyOwned) {
+        DB::transaction(function () use ($v, $cellId, $isFamilyOwned, $seedSlot, $pStart, $pEnd, $baseAmt) {
             if ($isFamilyOwned) {
                 $slotIdsInCell = Slot::where('grave_cell_id', $cellId)->pluck('id');
 
@@ -285,13 +290,14 @@ class RenewalPermitController extends Controller
                     $payload                    = $v;
                     $payload['reservation_id']  = $res->id;
                     $payload['slot_id']         = $res->slot_id;
-
-
                     $payload['relationship_to_deceased'] = $res->relationship_to_deceased;
 
                     $pen = $this->computePenaltyForCell($cellId, Carbon::parse($v['renewal_start']));
+                    $totalAmt = round($baseAmt + $pen['amount'], 2);
+
                     $penLine = "Penalty: {$pen['years']} year(s) × ".number_format(self::PENALTY_PER_YEAR,2,'.','')." = ".number_format($pen['amount'],2,'.','');
                     $payload['remarks'] = trim(($payload['remarks'] ?? '') . ' [BULK FAMILY CELL] ' . $penLine);
+                    $payload['amount_as_per_ord'] = $payload['amount_as_per_ord'] ?? $totalAmt;
 
                     Renewal::create($payload);
                 }
@@ -301,8 +307,11 @@ class RenewalPermitController extends Controller
                         ->update(['status' => 'renewal_pending']);
 
                     $pen = $this->computePenaltyForCell($cellId, Carbon::parse($v['renewal_start']));
+                    $totalAmt = round($baseAmt + $pen['amount'], 2);
+
                     $penLine = "Penalty: {$pen['years']} year(s) × ".number_format(self::PENALTY_PER_YEAR,2,'.','')." = ".number_format($pen['amount'],2,'.','');
                     $v['remarks'] = trim(($v['remarks'] ?? '') . ' [BULK FAMILY CELL] ' . $penLine);
+                    $v['amount_as_per_ord'] = $v['amount_as_per_ord'] ?? $totalAmt;
 
                     Renewal::create($v);
                 }
@@ -312,8 +321,11 @@ class RenewalPermitController extends Controller
                     ->update(['status' => 'renewal_pending']);
 
                 $pen = $this->computePenaltyForCell($cellId, Carbon::parse($v['renewal_start']));
+                $totalAmt = round($baseAmt + $pen['amount'], 2);
+
                 $penLine = "Penalty: {$pen['years']} year(s) × ".number_format(self::PENALTY_PER_YEAR,2,'.','')." = ".number_format($pen['amount'],2,'.','');
                 $v['remarks'] = trim(($v['remarks'] ?? '') . ' ' . $penLine);
+                $v['amount_as_per_ord'] = $v['amount_as_per_ord'] ?? $totalAmt;
 
                 Renewal::create($v);
             }
@@ -351,32 +363,31 @@ class RenewalPermitController extends Controller
 
             $renewal->slot?->update(['status' => 'occupied']);
 
-
             $user = auth()->user();
             $username = $user?->username ?? trim(($user->fname ?? '').' '.($user->lname ?? '')) ?: null;
 
-          ActionLog::create([
-    'user_id'     => $user?->id,
-    'username'    => $username,
-    'action'      => 'renewal.approved',
-    'target_type' => Renewal::class,
-    'target_id'   => $renewal->id,
-    'happened_at' => \Carbon\Carbon::parse($data['or_issued_at'])->startOfDay(),
-    'details'     => [
-        'or_number' => $data['or_number'],
-        'period'    => [
-            'start' => optional($renewal->renewal_start)->toDateString(),
-            'end'   => optional($renewal->renewal_end)->toDateString(),
-        ],
+            ActionLog::create([
+                'user_id'     => $user?->id,
+                'username'    => $username,
+                'action'      => 'renewal.approved',
+                'target_type' => Renewal::class,
+                'target_id'   => $renewal->id,
+                'happened_at' => \Carbon\Carbon::parse($data['or_issued_at'])->startOfDay(),
+                'details'     => [
+                    'or_number' => $data['or_number'],
+                    'period'    => [
+                        'start' => optional($renewal->renewal_start)->toDateString(),
+                        'end'   => optional($renewal->renewal_end)->toDateString(),
+                    ],
 
-        'deceased'  => $renewal->deceased?->full_name ?? (
-            $renewal->deceased?->last_name
-                ? ($renewal->deceased->last_name.', '.($renewal->deceased->first_name ?? ''))
-                : null
-        ),
-        'location'  => $renewal->buried_at,
-    ],
-]);
+                    'deceased'  => $renewal->deceased?->full_name ?? (
+                        $renewal->deceased?->last_name
+                            ? ($renewal->deceased->last_name.', '.($renewal->deceased->first_name ?? ''))
+                            : null
+                    ),
+                    'location'  => $renewal->buried_at,
+                ],
+            ]);
 
         });
 
@@ -394,7 +405,6 @@ class RenewalPermitController extends Controller
             ]);
 
             $renewal->slot()->update(['status' => 'occupied']);
-
 
             $user = auth()->user();
             $username = $user?->username ?? trim(($user->fname ?? '') . ' ' . ($user->lname ?? '')) ?: null;
@@ -458,7 +468,6 @@ class RenewalPermitController extends Controller
                 }
             }
 
-
             $user = auth()->user();
             $username = $user?->username ?? trim(($user->fname ?? '').' '.($user->lname ?? '')) ?: null;
 
@@ -516,7 +525,6 @@ class RenewalPermitController extends Controller
                 }
             }
 
-
             $user = auth()->user();
             $username = $user?->username ?? trim(($user->fname ?? '').' '.($user->lname ?? '')) ?: null;
 
@@ -531,7 +539,7 @@ class RenewalPermitController extends Controller
                     'batch'       => true,
                     'count'       => $batch->count(),
                     'renewal_ids' => $batch->pluck('id')->values(),
-                    'or_number'   => $data['or_number'] ?? null,
+                    'or_number'   => null,
 
                     'deceased'    => $renewal->deceased?->full_name ?? null,
                     'location'    => $renewal->buried_at ?? null,
@@ -542,8 +550,6 @@ class RenewalPermitController extends Controller
 
         return back()->with('success', 'Denied ' . $batch->count() . ' renewal request(s) for this cell.');
     }
-
-
 
     public function pendingByCell(Renewal $renewal)
     {
@@ -619,8 +625,6 @@ class RenewalPermitController extends Controller
             'updated' => $updates,
         ]);
     }
-
-
 
     private function resolvePeriod(array $payload, ?int $cellId, Carbon $ref): array
     {
@@ -751,5 +755,19 @@ class RenewalPermitController extends Controller
 
         $periodEnd = $periodStart->copy()->addYears(5);
         return [$periodStart, $periodEnd];
+    }
+
+    private function computeOrdinanceAmountForSlot(Slot $slot, Carbon $start, Carbon $end): float
+    {
+        $years = max(1, $start->diffInYears($end));
+
+        $siteName = optional(optional(optional($slot->cell)->level)->apartment)->name;
+        $isLeftSideRestos = strcasecmp(trim((string)$siteName), 'Left Side Restos') === 0;
+
+        $rate = $isLeftSideRestos
+            ? self::RATE_RESTOS_PER_YEAR
+            : self::RATE_APARTMENT_PER_YEAR;
+
+        return round($years * $rate, 2);
     }
 }

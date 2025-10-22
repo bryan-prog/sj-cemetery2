@@ -79,6 +79,18 @@ class Reservation extends Model
             ->latestOfMany();
     }
 
+    public function graveDiggersMany()
+{
+    return $this->belongsToMany(
+        \App\Models\GraveDiggers::class,
+        'grave_digger_reservation',
+        'reservation_id',
+        'grave_digger_id'
+    )->withTimestamps();
+}
+
+
+
 
     public function getRenewalStartAttribute() { return optional($this->latestApprovedRenewal)->renewal_start; }
     public function getRenewalEndAttribute()   { return optional($this->latestApprovedRenewal)->renewal_end; }

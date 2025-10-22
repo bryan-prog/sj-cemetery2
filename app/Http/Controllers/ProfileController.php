@@ -4,8 +4,9 @@ namespace App\Http\Controllers;
 
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-
+use App\Models\User;
 class ProfileController extends Controller
 {
     //
@@ -41,5 +42,5 @@ class ProfileController extends Controller
 
         return redirect()->back()->with('success', 'Profile updated successfully!');
     }
+  
 }
-

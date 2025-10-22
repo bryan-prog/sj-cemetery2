@@ -28,6 +28,13 @@
 <body>
 @php
 
+    function ordinal_upper(int $n): string {
+        $v = $n % 100;
+        if ($v >= 11 && $v <= 13) return strtoupper($n.'th');
+        $suf = ['th','st','nd','rd','th','th','th','th','th','th'][$n % 10];
+        return strtoupper($n.$suf);
+    }
+
     $renewal     = $renewal ?? null;
     $dec         = $dec      ?? ($renewal?->deceased);
     $dateApplied = $dateApplied
@@ -35,20 +42,26 @@
     $dod         = $dod
                    ?? ($dec?->date_of_death ? \Carbon\Carbon::parse($dec->date_of_death)->format('F d, Y') : '—');
 
-    $cell        = $renewal?->slot?->cell;
-    $level       = $cell?->level;
-    $apt         = $level?->apartment;
+    $cell   = $renewal?->slot?->cell;
+    $level  = $cell?->level;
+    $apt    = $level?->apartment;
 
-    $aptName     = $aptName ?? ($apt?->name ?? '—');
-    $location    = $location ?? ($renewal?->buried_at);
+
+    $aptName  = $aptName ?? ($apt?->name ?? null);
+
+
+    $LOCATION = $location ?? (
+        ($aptName && $level?->level_no)
+            ? strtoupper(trim($aptName.' '.ordinal_upper((int)$level->level_no).' LEVEL'))
+            : '—'
+    );
 
     $periodLabel = $periodLabel
                    ?? (($renewal?->renewal_start && $renewal?->renewal_end)
                         ? $renewal->renewal_start->format('F d, Y').' – '.$renewal->renewal_end->format('F d, Y')
                         : '—');
 
-   $feeNumeric = is_null($renewal->amount_as_per_ord) ? null : number_format((float)$renewal->amount_as_per_ord, 2);
-
+    $feeNumeric = is_null($renewal->amount_as_per_ord) ? null : number_format((float)$renewal->amount_as_per_ord, 2);
 @endphp
 
     <div class="container">
@@ -124,12 +137,11 @@
         <ul>
             <li>Name of the Deceased <span style="position:absolute; left:45%">:</span> <span style="text-transform:uppercase; position:absolute; left:48%; border-bottom:1px solid black; width:48%;"><b>{{ $dec?->name_of_deceased ?? '—' }}</b></span></li>
             <li>Who has died on (Date of Death) <span style="position:absolute; left:45%">:</span> <span style="text-transform:uppercase; position:absolute; left:48%; border-bottom:1px solid black; width:48%;"><b>{{ $dod }}</b></span></li>
+
+
             <li>Who was buried at (Burial Site) <span style="position:absolute; left:45%">:</span>
                 <span style="text-transform:uppercase; position:absolute; left:48%; border-bottom:1px solid black; width:48%;">
-                    <b>{{ $aptName }}</b>
-                    @if(!empty($location))
-                        <span style="text-transform:none;"><b> ({{ $location }})</b></span>
-                    @endif
+                    <b>{{ $LOCATION }}</b>
                 </span>
             </li>
         </ul>
@@ -139,13 +151,16 @@
     </div>
     <div class="row" style="margin-bottom: -10px;margin-left:10%;">
         <ul>
-          <li>Renewal Period <span style="position:absolute; left:45%">:</span>
-  <span style="text-transform:uppercase; position:absolute; left:48%; border-bottom:1px solid black; width:48%;">
-    <b>{{ $periodLabel }}</b>
-  </span>
-</li>
-            <li>Fee as per Ordinance No. 47 <br>Series of 2003 <span style="position:absolute; left:45%">:</span> <span style="text-transform:uppercase; position:absolute; left:48%; border-bottom:1px solid black; width:48%;"> <b>{{ $feeNumeric ?? '—' }}</b>
-</span></li>
+            <li>Renewal Period <span style="position:absolute; left:45%">:</span>
+                <span style="text-transform:uppercase; position:absolute; left:48%; border-bottom:1px solid black; width:48%;">
+                    <b>{{ $periodLabel }}</b>
+                </span>
+            </li>
+            <li>Fee as per Ordinance No. 47 <br>Series of 2003 <span style="position:absolute; left:45%">:</span>
+                <span style="text-transform:uppercase; position:absolute; left:48%; border-bottom:1px solid black; width:48%;">
+                    <b>{{ $feeNumeric ?? '—' }}</b>
+                </span>
+            </li>
         </ul>
     </div>
     <div class="row" style="margin-bottom: -10px;">
@@ -163,7 +178,6 @@
             </tr>
             <tr style="text-align:center;">
                 <td>SAN JUAN CEMETERY STAFF</td>
-
                 <td>SUPERVISING ADMINISTRATIVE OFFICER</td>
             </tr>
             <tr style="text-align:center;">

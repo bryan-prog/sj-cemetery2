@@ -31,6 +31,9 @@
 </style>
 
 @section('content')
+@php
+  $canModerate = auth()->check() && in_array(strtolower(auth()->user()->permission ?? ''), ['admin','super admin'], true);
+@endphp
 <div class="container mt-4">
   <div class="card">
     <div class="card-header">
@@ -169,7 +172,6 @@
                     <i class="fa fa-print" aria-hidden="true"></i>
                   </a>
 
-                  {{-- SHOW Edit button only if NOT approved/exhumed --}}
                   @if (!in_array($ex->status, ['approved','exhumed'], true))
                   <button type="button"
                           class="btn btn-sm btn-info edit-exh-btn"
@@ -181,7 +183,14 @@
 
                   @if($ex->status === 'pending')
                     @if($originIsBulk)
+                      <button type="button"
+                              class="btn btn-sm btn-dark open-bulk-rel-btn"
+                              data-id="{{ $ex->id }}"
+                              title="Set relationship per occupant">
+                        <i class="fa fa-users" aria-hidden="true"></i>
+                      </button>
 
+                      @if($canModerate)
                       <button type="button"
                               class="btn btn-sm btn-primary approve-batch-btn"
                               title="Mark all pending from this origin cell as Exhumed"
@@ -199,8 +208,9 @@
                               data-batch-action="{{ route('exhumations.denyBatch', $ex) }}">
                         <i class="fa fa-times-circle" aria-hidden="true"></i>
                       </button>
+                      @endif
                     @else
-
+                      @if($canModerate)
                       <button type="button"
                               class="btn btn-sm btn-success approve-btn"
                               data-toggle="modal"
@@ -219,6 +229,7 @@
                           <i class="fa fa-times" aria-hidden="true"></i>
                         </button>
                       </form>
+                      @endif
                     @endif
                   @endif
                 </td>
@@ -232,8 +243,7 @@
   </div>
 </div>
 
-
-
+@if($canModerate)
 <div class="modal fade" id="approveModal" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered" role="document">
     <div class="modal-content">
@@ -271,7 +281,6 @@
     </div>
   </div>
 </div>
-
 
 <div class="modal fade" id="approveBatchModal" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered" role="document">
@@ -314,16 +323,13 @@
   </div>
 </div>
 
-
 <div class="modal fade" id="denyBatchModal" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered" role="document">
     <div class="modal-content">
       <form id="denyBatchForm" method="POST">
         @csrf
         <div class="modal-header">
-          <h5 class="modal-title">
-           Deny All (Same Cell)
-          </h5>
+          <h5 class="modal-title">Deny All (Same Cell)</h5>
           <button type="button" class="close" data-dismiss="modal" aria-label="Close">
             <span>&times;</span>
           </button>
@@ -341,7 +347,7 @@
     </div>
   </div>
 </div>
-
+@endif
 
 <div class="modal fade" id="editExhModal" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-xl" role="document">
@@ -380,7 +386,7 @@
             </div>
             <div class="form-group col-md-4">
               <label class="form-control-label"><img src="https://img.icons8.com/doodle/20/refund.png"> Amount (fee as per ordinance)</label>
-              <input type="number" step="0.01" class="form-control ex-field" name="amount_as_per_ord">
+              <input type="number" step="0.01" class="form-control ex-field" name="amount_as_per_ord" readonly>
             </div>
           </div>
 
@@ -423,7 +429,6 @@
   </div>
 </div>
 
-
 <div class="modal fade" id="saveSuccessModal" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered" role="document">
     <div class="modal-content">
@@ -436,6 +441,31 @@
       <div class="modal-footer py-2">
         <button type="button" class="btn btn-success btn-sm" data-dismiss="modal">OK</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="bulkRelModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <form id="bulkRelForm" method="POST">
+        <input type="hidden" name="_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="_method" value="PATCH">
+        <div class="modal-header">
+          <h5 class="modal-title">Set Relationship Per Occupant</h5>
+          <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+        </div>
+        <div class="modal-body">
+          <div id="bulkRelBody"><div class="text-center p-3">Loading...</div></div>
+          <div class="alert alert-info small mb-0">
+            Only <strong>pending</strong> exhumations in this origin cell are editable here.
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-success">Save All</button>
+        </div>
+      </form>
     </div>
   </div>
 </div>
@@ -454,6 +484,8 @@
   const EXH_DENY_URL_TPL           = @json(route('exhumations.deny', ['exhumation' => '__ID__']));
   const EXH_DENY_BATCH_URL_TPL     = @json(route('exhumations.denyBatch', ['exhumation' => '__ID__']));
   const EXH_PERMIT_URL_TPL         = @json(route('exhumations.permit', ['exhumation' => '__ID__']));
+  const EXH_PENDING_BY_CELL_URL_TPL= @json(route('exhumations.pendingByCell', ['exhumation' => '__ID__']));
+  const EXH_BULK_REL_URL_TPL       = @json(route('exhumations.bulkRelationships', ['exhumation' => '__ID__']));
 </script>
 
 <script>
@@ -655,6 +687,66 @@ $(function () {
       complete: function () {
         $btn.prop('disabled', false);
         setViewMode(true);
+      }
+    });
+  });
+
+  var bulkRelAnchorId = null;
+
+  $(document).on('click', '.open-bulk-rel-btn', function(){
+    bulkRelAnchorId = $(this).data('id');
+    if (!bulkRelAnchorId) return;
+
+    $('#bulkRelBody').html('<div class="text-center p-3">Loading...</div>');
+    $('#bulkRelForm').attr('action', EXH_BULK_REL_URL_TPL.replace('__ID__', bulkRelAnchorId));
+
+    $.getJSON(EXH_PENDING_BY_CELL_URL_TPL.replace('__ID__', bulkRelAnchorId), function(resp){
+      var html = '';
+      if (resp.items && resp.items.length) {
+        html += '<div class="mb-2"><strong>Cell:</strong> ' + (resp.cell_label || '—') + '</div>';
+        html += '<div class="table-responsive"><table class="table table-bordered mb-0"><thead><tr>'
+              + '<th>Deceased</th><th>Origin</th><th>Relationship to Deceased</th></tr></thead><tbody>';
+
+        resp.items.forEach(function(it){
+          html += '<tr>'
+               +   '<td>'+ (it.deceased || '—') +'</td>'
+               +   '<td>'+ (it.origin || '—') +'</td>'
+               +   '<td><input type="text" class="form-control form-control-sm" '
+               +       'name="relationship_map['+ it.exhumation_id +']" '
+               +       'value="'+ (it.relationship ? $('<div/>').text(it.relationship).html() : '') +'"></td>'
+               + '</tr>';
+        });
+
+        html += '</tbody></table></div>';
+      } else {
+        html = '<div class="alert alert-info mb-0">No pending exhumations found in this cell.</div>';
+      }
+      $('#bulkRelBody').html(html);
+    });
+
+    $('#bulkRelModal').modal('show');
+  });
+
+  $('#bulkRelForm').on('submit', function(e){
+    e.preventDefault();
+    var $form = $(this);
+    var $btn  = $form.find('button[type=submit]').prop('disabled', true);
+
+    $.ajax({
+      url: $form.attr('action'),
+      method: 'POST',
+      data: $form.serialize(),
+      success: function(resp){
+        $('#bulkRelModal').modal('hide');
+        if (window.location && window.location.reload) {
+          setTimeout(function(){ window.location.reload(); }, 300);
+        }
+      },
+      error: function(xhr){
+        alert('Failed to save. Please review inputs and try again.');
+      },
+      complete: function(){
+        $btn.prop('disabled', false);
       }
     });
   });

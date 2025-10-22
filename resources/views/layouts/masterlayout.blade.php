@@ -86,7 +86,7 @@
               </div>
             </div>
             <ul class="navbar-nav ml-lg-auto">
-              <li>
+
                 @if(Auth::user()->permission == 'Super Admin')
                 <a class="nav-link pr-0" href="{{ URL('/logs') }}" role="button" aria-haspopup="true" aria-expanded="false">
                   <div class="media align-items-center">
@@ -117,10 +117,15 @@
                     <i class="ni ni-single-02"></i>
                     <span>My profile</span>
                   </a>
+                  @if(auth()->user()->permission === 'Super Admin')
                   <a href="{{ URL('/list_of_users') }}" class="dropdown-item">
                     <i class="ni ni-settings-gear-65"></i>
+            
                     <span>List of Users</span>
+
                   </a>
+
+                  @endif
                   <div class="dropdown-divider"></div>
                   <a href="{{ route('logout') }}" class="dropdown-item" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
                     <i class="ni ni-user-run"></i>
@@ -177,7 +182,32 @@
           }
         });
       });
+
+
+      document.addEventListener('click', function (e) {
+  const trigger = e.target.closest(
+    '[data-bs-dismiss="modal"], [data-dismiss="modal"], .modal .btn-close, .modal .close'
+  );
+  if (!trigger) return;
+
+  const modalEl = trigger.closest('.modal');
+  if (!modalEl) return;
+
+  e.preventDefault();
+
+  // Try BS5 first
+  if (window.bootstrap && bootstrap.Modal) {
+    bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+    return;
+  }
+
+  // Fallback to BS4 jQuery plugin
+  if (window.jQuery && typeof jQuery.fn.modal === 'function') {
+    try { jQuery(modalEl).modal('hide'); } catch (_) {}
+  }
+});
     </script>
+
 
     <!-- Page-level scripts (sections & stacks) -->
     @yield('scripts')

@@ -16,4 +16,15 @@ class GraveDiggers extends Model
         return $this->hasMany(Reservation::class, 'grave_diggers_id');
     }
 
+
+    public function reservationsMany()
+{
+    return $this->belongsToMany(
+        \App\Models\Reservation::class,
+        'grave_digger_reservation',
+        'grave_digger_id',
+        'reservation_id'
+    )->withTimestamps();
+}
+
 }
