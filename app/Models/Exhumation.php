@@ -16,7 +16,8 @@ class Exhumation extends Model
         'contact',
         'address',
         'amount_as_per_ord',
-         'or_number',
+        'or_number',
+        'for_cremation',
         'or_issued_at',
         'verifiers_id',
         'status',
@@ -27,7 +28,7 @@ class Exhumation extends Model
     protected $casts = [
         'date_applied' => 'date',
          'or_issued_at' => 'date',
-
+         'for_cremation' => 'boolean',
         'created_at'   => 'datetime',
         'updated_at'   => 'datetime',
     ];

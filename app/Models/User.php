@@ -28,7 +28,11 @@ class User extends Authenticatable
         'permission',
         'username',
         'password',
-        'active'
+        'active',
+         'can_approve_deny',
+        'can_view_actionlogs',
+        'can_edit_permits',
+        'can_print_permits',
 
 
 
@@ -51,6 +55,10 @@ class User extends Authenticatable
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
+          'can_approve_deny'    => 'boolean',
+        'can_view_actionlogs' => 'boolean',
+        'can_edit_permits'    => 'boolean',
+        'can_print_permits'   => 'boolean',
     ];
 
 

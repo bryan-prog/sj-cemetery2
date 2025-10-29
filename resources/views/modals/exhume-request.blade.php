@@ -1,4 +1,3 @@
-
 <div class="modal fade" id="exhumReqModal" tabindex="-1" aria-hidden="true"
      data-bs-backdrop="static" data-bs-keyboard="false">
   <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -14,8 +13,6 @@
             <img class="mr-2" src="https://img.icons8.com/doodle/30/information.png" alt="i"/>
             EXHUMATION&nbsp;REQUEST
           </h5>
-
-
           <button type="button"
                   class="close exhum-close"
                   data-dismiss="modal"
@@ -82,8 +79,17 @@
           </div>
 
           <div class="row mt-3">
+            <div class="col-md-12">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="exhum_for_cremation" name="for_cremation" value="1">
+                <label class="form-check-label" for="exhum_for_cremation" style="font-weight:600;">For Cremation</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="row mt-3">
             <div class="col-md-8">
-              <label class="form-control-label">
+              <label id="transfer_location_label" class="form-control-label">
                 <img src="https://img.icons8.com/doodle/20/address.png" alt="to">
                 Transfer&nbsp;Location
               </label>
@@ -106,13 +112,11 @@
               </label>
               <input type="text" name="contact" id="exhum_contact" class="form-control">
             </div>
-
             <div class="col-md-4">
               <label class="form-control-label">
                 <img src="https://img.icons8.com/doodle/20/refund.png" alt="fee">
                 Payment&nbsp;as&nbsp;per&nbsp;Ord.
               </label>
-
               <input
                 type="number"
                 name="amount_as_per_ord"
@@ -130,7 +134,6 @@
                 Fixed amount as per ordinance.
               </small>
             </div>
-
             <div class="col-md-4">
               <label class="form-control-label">
                 <img src="https://img.icons8.com/doodle/20/manager.png" alt="verifier">
@@ -144,13 +147,10 @@
               </select>
             </div>
           </div>
-
-
         </div>
 
         <div class="modal-footer">
           <button class="btn btn-danger" type="submit">Submit&nbsp;Request</button>
-
           <button type="button"
                   class="btn btn-secondary exhum-close"
                   data-dismiss="modal"
@@ -162,3 +162,27 @@
     </div>
   </div>
 </div>
+
+<script>
+$(function(){
+  const $cb = $('#exhum_for_cremation');
+  const $label = $('#transfer_location_label');
+  const $loc   = $('#current_location_field');
+
+  function syncCremationUI(){
+    if ($cb.is(':checked')) {
+      $label.html('<img src="https://img.icons8.com/doodle/20/address.png" alt="to"> Cremation&nbsp;Location');
+      if ($loc.is('[readonly]')) {
+      } else {
+        $loc.attr('placeholder','e.g., Crematorium / Address');
+      }
+    } else {
+      $label.html('<img src="https://img.icons8.com/doodle/20/address.png" alt="to"> Transfer&nbsp;Location');
+      $loc.attr('placeholder','');
+    }
+  }
+
+  $cb.on('change', syncCremationUI);
+  syncCremationUI();
+});
+</script>

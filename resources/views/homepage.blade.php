@@ -13,7 +13,7 @@
 
   .progress.progress-xs { height: 8px; }
   .list-levels { margin-top: .85rem; }
-  .list-levels .list-group-item { transition: background .2s ease; padding-top:.75rem; padding-bottom:.75rem; } /* more vertical room */
+  .list-levels .list-group-item { transition: background .2s ease; padding-top:.75rem; padding-bottom:.75rem; }
   .list-levels .list-group-item:hover { background: #f8f9fa; }
   .list-levels h6 { margin:0; font-weight:600; }
   .list-levels small { color:#6c757d; display:inline-block; margin-top:.15rem; }
@@ -69,6 +69,15 @@
   }
 
   .row.align-items-center .col-8 .progress { margin-top: .35rem; }
+  @media screen and (max-width: 764px){
+    .row.mb-4.d-flex.justify-content-end {
+      display: flex !important;
+      flex-direction: column !important;
+    }
+    .btn{
+      margin-bottom: 10px !important;
+    }
+  }
 </style>
 
 @section('content')
@@ -90,22 +99,6 @@
   </div>
 
   <div class="row">
-    <!-- <div class="col-xl-3 col-md-6">
-      <div class="card card-stats">
-        <div class="card-body">
-          <div class="row">
-            <div class="col">
-              <h5 class="card-title text-uppercase text-muted mb-0">Total</h5>
-              <span class="h2 font-weight-bold mb-0">{{ number_format($overallTotal) }}</span>
-            </div>
-            <div class="col-auto">
-              <img src="https://img.icons8.com/bubbles/70/folder-invoices.png" alt="folder-invoices"/>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div> -->
-
     <div class="col-xl-4 col-md-6">
       <div class="card card-stats" id="reservationsCard">
         <div class="card-body">
@@ -139,7 +132,7 @@
     </div>
 
     <div class="col-xl-4 col-md-6">
-      <div class="card card-stats">
+      <div class="card card-stats" id="forExhumationCard">
         <div class="card-body">
           <div class="row">
             <div class="col">
@@ -172,7 +165,6 @@
             <label class="form-control-label mb-1">Apartment</label>
 
             <span class="left-icon" aria-hidden="true">
-
               <svg width="18" height="18" viewBox="0 0 24 24" stroke="#6b7280" fill="none" stroke-width="2">
                 <path d="M12 21s-6-5.686-6-10a6 6 0 1 1 12 0c0 4.314-6 10-6 10z"/>
                 <circle cx="12" cy="11" r="2.5"/>
@@ -232,7 +224,8 @@
       </div>
     </div>
 
-    <!-- <div class="col-xl-8">
+    <!--
+    <div class="col-xl-8">
       <div class="card">
         <div class="card-header border-0">
           <div class="row align-items-center">
@@ -278,7 +271,8 @@
         </div>
 
       </div>
-    </div> -->
+    </div>
+    -->
   </div>
 </div>
 
@@ -397,10 +391,6 @@
         <img src="https://img.icons8.com/bubbles/150/verified-account.png" alt="ok"/>
         <p id="successReservationMessage" class="mt-2 mb-0" style="color:black;font-weight:600;text-transform:uppercase;"></p>
       </div>
-
-      <div class="modal-footer" style="border-top:0;">
-        <a href="{{ url('/Homepage') }}" class="btn btn-success" data-bs-dismiss="modal">OK</a>
-      </div>
     </div>
   </div>
 </div>
@@ -416,11 +406,9 @@
 @if(session('success'))
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-
   var msg = @json(session('success'));
   var msgEl = document.getElementById('successReservationMessage');
   if (msgEl) msgEl.textContent = msg || 'Reservation saved successfully!';
-
   var el = document.getElementById('successReservationModal');
   var modal = new bootstrap.Modal(el);
   modal.show();
@@ -429,23 +417,20 @@ document.addEventListener('DOMContentLoaded', function () {
 @endif
 
 <script>
-
-
 Chart.register(ChartDataLabels);
-
 
 var type = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
-
 var deathCounts = ["{{$death_jan}}", "{{$death_feb}}", "{{$death_mar}}", "{{$death_apr}}", "{{$death_may}}", "{{$death_jun}}", "{{$death_jul}}", "{{$death_aug}}", "{{$death_sep}}", "{{$death_oct}}", "{{$death_nov}}", "{{$death_dec}}"];
-
 
 var renewalCounts = ["{{$ren_jan ?? 0}}", "{{$ren_feb ?? 0}}", "{{$ren_mar ?? 0}}", "{{$ren_apr ?? 0}}", "{{$ren_may ?? 0}}", "{{$ren_jun ?? 0}}", "{{$ren_jul ?? 0}}", "{{$ren_aug ?? 0}}", "{{$ren_sep ?? 0}}", "{{$ren_oct ?? 0}}", "{{$ren_nov ?? 0}}", "{{$ren_dec ?? 0}}"];
 
+// NEW: monthly exhumations (approved)
+var exhumationCounts = ["{{$exh_jan ?? 0}}","{{$exh_feb ?? 0}}","{{$exh_mar ?? 0}}","{{$exh_apr ?? 0}}","{{$exh_may ?? 0}}","{{$exh_jun ?? 0}}","{{$exh_jul ?? 0}}","{{$exh_aug ?? 0}}","{{$exh_sep ?? 0}}","{{$exh_oct ?? 0}}","{{$exh_nov ?? 0}}","{{$exh_dec ?? 0}}"];
 
-var deathsBarColor   = ["#800000"];
-var renewalsBarColor = ["#2E86C1"];
-
+var deathsBarColor      = ["#800000"];
+var renewalsBarColor    = ["#2E86C1"];
+var exhumationsBarColor = ["#8E44AD"];
 
 var monthChart = new Chart("monthChart", {
   type: "bar",
@@ -471,7 +456,6 @@ var monthChart = new Chart("monthChart", {
   }
 });
 
-
 function showDeaths() {
   var title = document.getElementById('monthChartTitle');
   if (title) title.textContent = "Total no. of Deaths per month";
@@ -490,12 +474,22 @@ function showRenewals() {
   monthChart.update();
 }
 
+function showExhumations() {
+  var title = document.getElementById('monthChartTitle');
+  if (title) title.textContent = "Total no. of Exhumations per month";
+  monthChart.data.datasets[0].data = exhumationCounts;
+  monthChart.data.datasets[0].label = "Exhumations";
+  monthChart.data.datasets[0].backgroundColor = exhumationsBarColor;
+  monthChart.update();
+}
 
-var forRenewalCard   = document.getElementById('forRenewalCard');
-var reservationsCard = document.getElementById('reservationsCard');
+var forRenewalCard     = document.getElementById('forRenewalCard');
+var reservationsCard   = document.getElementById('reservationsCard');
+var forExhumationCard  = document.getElementById('forExhumationCard');
 
-if (forRenewalCard)   forRenewalCard.addEventListener('click', showRenewals);
-if (reservationsCard) reservationsCard.addEventListener('click', showDeaths);
+if (forRenewalCard)    forRenewalCard.addEventListener('click', showRenewals);
+if (reservationsCard)  reservationsCard.addEventListener('click', showDeaths);
+if (forExhumationCard) forExhumationCard.addEventListener('click', showExhumations);
 </script>
 
 <script>

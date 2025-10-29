@@ -15,6 +15,15 @@
       .modal-xl {
         max-width: 1386px !important;
     }
+    @media screen and (max-width: 764px){
+      .row.gate{
+        display: flex !important;
+        flex-direction: column-reverse !important;
+      }
+      .col-6{
+        max-width:100% !important;
+      }
+    }
 </style>
 
 @section('content')
@@ -29,7 +38,7 @@
     </div>
 
     <div class="card-body pb-5 pt-2">
-      <div class="row" style="align-items: center;">
+      <div class="row gate" style="align-items: center;">
         <div class="col-6 pl-4">
           <div class="d-flex justify-content-center mb-2">
             <img src="https://img.icons8.com/bubbles/120/verified-account.png"/>

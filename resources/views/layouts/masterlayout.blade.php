@@ -59,7 +59,7 @@
 
   <body>
     <div class="main-content" id="panel">
-      <!-- Header -->
+
       <nav class="navbar navbar-expand-lg bg-dark fix-top shadow" id="fixed-top" style="border-color: #A2A6B0 !important;">
         <div class="container col-12">
           <a class="navbar-brand" href="{{ URL('/Homepage') }}">
@@ -86,20 +86,31 @@
               </div>
             </div>
             <ul class="navbar-nav ml-lg-auto">
-
-                @if(Auth::user()->permission == 'Super Admin')
+              <li class="nav-item">
+                @if(auth()->user()->can('view-actionlogs') || auth()->user()->permission === 'Super Admin')
                 <a class="nav-link pr-0" href="{{ URL('/logs') }}" role="button" aria-haspopup="true" aria-expanded="false">
                   <div class="media align-items-center">
                     <div class="media-body ml-2 d-none d-lg-block">
-                      <span class="mb-0 text-sm font-weight-bold text-white">
-                        Action Logs
-                      </span>
+                      <span class="mb-0 text-sm font-weight-bold text-white">Action Logs</span>
                     </div>
                   </div>
                 </a>
                 @endif
               </li>
-              <li>
+
+              {{-- <li class="nav-item">
+                @if(auth()->user()->can('manage-user-access') || auth()->user()->permission === 'Super Admin')
+                <a class="nav-link pr-0" href="{{ route('user-access.index') }}" role="button" aria-haspopup="true" aria-expanded="false">
+                  <div class="media align-items-center">
+                    <div class="media-body ml-2 d-none d-lg-block">
+                      <span class="mb-0 text-sm font-weight-bold text-white">Manage Access</span>
+                    </div>
+                  </div>
+                </a>
+                @endif
+              </li> --}}
+
+              <li class="nav-item dropdown">
                 <a class="nav-link pr-0" href="#" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                   <div class="media align-items-center">
                     <div class="media-body ml-2 d-none d-lg-block">
@@ -120,11 +131,8 @@
                   @if(auth()->user()->permission === 'Super Admin')
                   <a href="{{ URL('/list_of_users') }}" class="dropdown-item">
                     <i class="ni ni-settings-gear-65"></i>
-            
                     <span>List of Users</span>
-
                   </a>
-
                   @endif
                   <div class="dropdown-divider"></div>
                   <a href="{{ route('logout') }}" class="dropdown-item" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
@@ -146,14 +154,12 @@
       </section>
     </div>
 
-    <!-- Core JS (load once, at the bottom) -->
+
     <script src="{{ asset('/assets/vendor/jquery/dist/jquery.min.js') }}"></script>
     <script src="{{ asset('/assets/vendor/bootstrap/dist/js/bootstrap.bundle.min.js') }}"></script>
     <script src="{{ asset('assets/vendor/js-cookie/js.cookie.js') }}"></script>
     <script src="{{ asset('assets/vendor/jquery.scrollbar/jquery.scrollbar.min.js') }}"></script>
     <script src="{{ asset('assets/vendor/jquery-scroll-lock/dist/jquery-scrollLock.min.js') }}"></script>
-
-    <!-- DataTables JS -->
     <script src="{{ asset('assets/vendor/datatables.net/js/jquery.dataTables.min.js') }}"></script>
     <script src="{{ asset('assets/vendor/datatables.net-bs4/js/dataTables.bootstrap4.min.js') }}"></script>
     <script src="{{ asset('assets/vendor/datatables.net-buttons/js/dataTables.buttons.min.js') }}"></script>
@@ -163,10 +169,18 @@
     <script src="{{ asset('assets/vendor/datatables.net-buttons/js/buttons.print.min.js') }}"></script>
     <script src="{{ asset('assets/vendor/datatables.net-select/js/dataTables.select.min.js') }}"></script>
 
-    <!-- Argon JS -->
+
     <script src="{{ asset('assets/js/argon.js?v=1.1.0') }}"></script>
 
-    <!-- Global helpers -->
+    <script>
+      window.TrackJS &&
+      TrackJS.install({
+        token: "ee6fab19c5a04ac1a32a645abde4613a",
+        application: "argon-design-system-pro"
+      });
+    </script>
+
+
     <script>
       $(document).ready(function(){
         window.setTimeout(function () {
@@ -183,33 +197,31 @@
         });
       });
 
-
       document.addEventListener('click', function (e) {
-  const trigger = e.target.closest(
-    '[data-bs-dismiss="modal"], [data-dismiss="modal"], .modal .btn-close, .modal .close'
-  );
-  if (!trigger) return;
+        const trigger = e.target.closest(
+          '[data-bs-dismiss="modal"], [data-dismiss="modal"], .modal .btn-close, .modal .close'
+        );
+        if (!trigger) return;
 
-  const modalEl = trigger.closest('.modal');
-  if (!modalEl) return;
+        const modalEl = trigger.closest('.modal');
+        if (!modalEl) return;
 
-  e.preventDefault();
+        e.preventDefault();
 
-  // Try BS5 first
-  if (window.bootstrap && bootstrap.Modal) {
-    bootstrap.Modal.getOrCreateInstance(modalEl).hide();
-    return;
-  }
 
-  // Fallback to BS4 jQuery plugin
-  if (window.jQuery && typeof jQuery.fn.modal === 'function') {
-    try { jQuery(modalEl).modal('hide'); } catch (_) {}
-  }
-});
+        if (window.bootstrap && bootstrap.Modal) {
+          bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+          return;
+        }
+
+
+        if (window.jQuery && typeof jQuery.fn.modal === 'function') {
+          try { jQuery(modalEl).modal('hide'); } catch (_) {}
+        }
+      });
     </script>
 
 
-    <!-- Page-level scripts (sections & stacks) -->
     @yield('scripts')
     @stack('scripts')
   </body>

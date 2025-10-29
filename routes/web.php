@@ -15,6 +15,8 @@ use App\Http\Controllers\ReportViewController;
 use App\Http\Controllers\ReservationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReservationBrowserController;
+use App\Http\Controllers\UserAccessController;
+
 
 
 
@@ -69,7 +71,7 @@ Route::group(['middleware' => 'prevent-back-history'], function () {
     Route::get('list_of_users', [HomeController::class,'list_of_users'])->name('list_of_users');
     Route::get('/user_details/{id}', [HomeController::class, 'user_details'])->whereNumber('id');
     Route::post('/change_user_info', [HomeController::class, 'change_user_info']);
- 
+
     Route::middleware(['auth'])->group(function () {
         Route::put('/profile/update', [ProfileController::class, 'update'])->name('profile.update');
     });
@@ -88,7 +90,7 @@ Route::group(['middleware' => 'prevent-back-history'], function () {
     Route::get('test', [HomeController::class, 'test'])->name('test');
     Route::get('/test_list_of_users', [HomeController::class, 'test_list_of_users']);
     Route::post('/Test_edit_user',    [HomeController::class, 'Test_edit_user']);
-    Route::post('/create',            [App\Http\Controllers\RegisterController::class, 'create']);
+    // Route::post('/create',            [App\Http\Controllers\RegisterController::class, 'create']);
     Route::get('my_profile',          [HomeController::class,'my_profile'])->name('my_profile');
 
     Route::get('/api/burial-sites', [LookupController::class, 'index']);
@@ -233,4 +235,10 @@ Route::patch('/exhumations/{exhumation}/bulk-relationships', [ExhumationPermitCo
     Route::post('/logs/data', [ActionLogController::class, 'data'])->name('logs.data');
 
     Route::get('order_of_payment', [HomeController::class, 'order_of_payment'])->name('order_of_payment');
+
+  Route::middleware(['auth','can:manage-user-access'])->group(function () {
+    Route::get('/user-access', [UserAccessController::class, 'index'])->name('user-access.index');
+    Route::get('/user-access/{user}', [UserAccessController::class, 'show'])->name('user-access.show');
+    Route::patch('/user-access/{user}', [UserAccessController::class, 'update'])->name('user-access.update');
+});
 });

@@ -8,9 +8,12 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Carbon\Carbon;
 use App\Models\Renewal; // <-- ADDED
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class ExhumationPermitController extends Controller
 {
+    use AuthorizesRequests;
+
     public function locationLabel(?Slot $slot): ?string
     {
         if (! $slot || ! $slot->cell || ! $slot->cell->level) return null;
@@ -98,11 +101,14 @@ class ExhumationPermitController extends Controller
             'date_of_death'              => $dod,
             'from_label'                 => $this->locationLabel($exhumation->fromSlot) ?? '—',
             'to_label'                   => $this->locationLabel($exhumation->toSlot)   ?? '—',
+            'for_cremation'              => (bool) $exhumation->for_cremation,
         ]);
     }
 
     public function update(Request $r, Exhumation $exhumation)
     {
+        $this->authorize('edit-permits');
+
         abort_if(!in_array($exhumation->status, ['pending','approved','exhumed'], true), 400, 'Request already finalized.');
 
         $data = $r->validate([
@@ -113,6 +119,7 @@ class ExhumationPermitController extends Controller
             'amount_as_per_ord'        => 'nullable|numeric|min:0',
             'date_applied'             => 'required|date_format:Y-m-d',
             'current_location'         => 'nullable|string|max:120',
+            'for_cremation'            => 'nullable|boolean',
         ]);
 
         $data['requesting_party'] = strtoupper($data['requesting_party']);
@@ -133,6 +140,7 @@ class ExhumationPermitController extends Controller
                 'relationship_to_deceased' => $exhumation->relationship_to_deceased ?? '—',
                 'date_applied'             => optional($exhumation->date_applied)->format('Y-m-d'),
                 'for_transfer'             => $forTransfer,
+                'for_cremation'            => (bool) $exhumation->for_cremation,
             ],
         ]);
     }
@@ -154,6 +162,7 @@ class ExhumationPermitController extends Controller
             'amount_as_per_ord'        => 'nullable|numeric|min:0',
             'verifiers_id'             => 'nullable|exists:verifiers,id',
             'remarks'                  => 'nullable|string|max:500',
+            'for_cremation'            => 'nullable|boolean',
         ]);
 
         DB::transaction(function () use ($v, $r) {
@@ -185,6 +194,7 @@ class ExhumationPermitController extends Controller
             }
 
             $isBulk = $activeSourceSlots->count() > 1;
+            $forCremation = $r->boolean('for_cremation');
 
             if (! $isBulk) {
                 $to   = null;
@@ -233,6 +243,7 @@ class ExhumationPermitController extends Controller
                     'verifiers_id'             => $v['verifiers_id'],
                     'status'                   => 'pending',
                     'remarks'                  => $r->input('remarks') ?: null,
+                    'for_cremation'            => $forCremation,
                 ]);
 
                 return;
@@ -300,6 +311,7 @@ class ExhumationPermitController extends Controller
                         'verifiers_id'             => $v['verifiers_id'],
                         'status'                   => 'pending',
                         'remarks'                  => trim(($r->input('remarks') ?: '') . ' [BULK CELL TRANSFER]'),
+                        'for_cremation'            => $forCremation,
                     ]);
                 }
 
@@ -328,6 +340,7 @@ class ExhumationPermitController extends Controller
                     'verifiers_id'             => $v['verifiers_id'],
                     'status'                   => 'pending',
                     'remarks'                  => trim(($r->input('remarks') ?: '') . ' [BULK OUTSIDE]'),
+                    'for_cremation'            => $forCremation,
                 ]);
             }
         });
@@ -335,88 +348,90 @@ class ExhumationPermitController extends Controller
         return back()->with('success', 'Exhumation request lodged! (Bulk where applicable)');
     }
 
-
     public function pendingByCell(Exhumation $exhumation)
-{
-    $fromSlot = Slot::with('cell.level.apartment')->findOrFail($exhumation->from_slot_id);
-    $cellId   = (int) $fromSlot->grave_cell_id;
+    {
+        $fromSlot = Slot::with('cell.level.apartment')->findOrFail($exhumation->from_slot_id);
+        $cellId   = (int) $fromSlot->grave_cell_id;
 
-    $slotIds = Slot::where('grave_cell_id', $cellId)->pluck('id');
+        $slotIds = Slot::where('grave_cell_id', $cellId)->pluck('id');
 
-    $rows = Exhumation::with(['reservation.deceased','fromSlot.cell.level.apartment','toSlot.cell.level.apartment'])
-        ->whereIn('from_slot_id', $slotIds)
-        ->where('status', 'pending')
-        ->orderBy('id')
-        ->get();
+        $rows = Exhumation::with(['reservation.deceased','fromSlot.cell.level.apartment','toSlot.cell.level.apartment'])
+            ->whereIn('from_slot_id', $slotIds)
+            ->where('status', 'pending')
+            ->orderBy('id')
+            ->get();
 
-    $cellLabel = ($fromSlot->cell && $fromSlot->cell->level && $fromSlot->cell->level->apartment)
-        ? ($fromSlot->cell->level->apartment->name.' • L'.$fromSlot->cell->level->level_no.' R'.$fromSlot->cell->row_no.' C'.$fromSlot->cell->col_no)
-        : '—';
+        $cellLabel = ($fromSlot->cell && $fromSlot->cell->level && $fromSlot->cell->level->apartment)
+            ? ($fromSlot->cell->level->apartment->name.' • L'.$fromSlot->cell->level->level_no.' R'.$fromSlot->cell->row_no.' C'.$fromSlot->cell->col_no)
+            : '—';
 
-    $items = $rows->map(function ($ex) {
-        $dec = optional($ex->reservation)->deceased;
-        $decName = $dec?->full_name
-            ?: ($dec?->last_name ? ($dec->last_name.', '.($dec->first_name ?? '')) : '—');
+        $items = $rows->map(function ($ex) {
+            $dec = optional($ex->reservation)->deceased;
+            $decName = $dec?->full_name
+                ?: ($dec?->last_name ? ($dec->last_name.', '.($dec->first_name ?? '')) : '—');
 
-        $origin = $this->locationLabel($ex->fromSlot) ?? '—';
+            $origin = $this->locationLabel($ex->fromSlot) ?? '—';
 
-        return [
-            'exhumation_id' => $ex->id,
-            'deceased'      => $decName,
-            'relationship'  => $ex->relationship_to_deceased,
-            'origin'        => $origin,
-        ];
-    })->values();
+            return [
+                'exhumation_id' => $ex->id,
+                'deceased'      => $decName,
+                'relationship'  => $ex->relationship_to_deceased,
+                'origin'        => $origin,
+                'for_cremation' => (bool) $ex->for_cremation,
+            ];
+        })->values();
 
-    return response()->json([
-        'cell_label' => $cellLabel,
-        'items'      => $items,
-    ]);
-}
+        return response()->json([
+            'cell_label' => $cellLabel,
+            'items'      => $items,
+        ]);
+    }
 
-public function bulkRelationships(Request $r, Exhumation $exhumation)
-{
-    abort_unless($exhumation->status === 'pending', 400, 'Only pending exhumations can be batch-edited.');
+    public function bulkRelationships(Request $r, Exhumation $exhumation)
+    {
+        abort_unless($exhumation->status === 'pending', 400, 'Only pending exhumations can be batch-edited.');
 
-    $data = $r->validate([
-        'relationship_map'   => 'required|array|min:1',
-        'relationship_map.*' => 'nullable|string|max:100',
-    ]);
+        $data = $r->validate([
+            'relationship_map'   => 'required|array|min:1',
+            'relationship_map.*' => 'nullable|string|max:100',
+        ]);
 
-    $fromSlot = Slot::with('cell')->findOrFail($exhumation->from_slot_id);
-    $cellId   = (int) optional($fromSlot)->grave_cell_id;
+        $fromSlot = Slot::with('cell')->findOrFail($exhumation->from_slot_id);
+        $cellId   = (int) optional($fromSlot)->grave_cell_id;
 
-    $slotIds = Slot::where('grave_cell_id', $cellId)->pluck('id');
+        $slotIds = Slot::where('grave_cell_id', $cellId)->pluck('id');
 
-    $pendingIds = Exhumation::whereIn('from_slot_id', $slotIds)
-        ->where('status', 'pending')
-        ->pluck('id')
-        ->all();
+        $pendingIds = Exhumation::whereIn('from_slot_id', $slotIds)
+            ->where('status', 'pending')
+            ->pluck('id')
+            ->all();
 
-    $updates = 0;
+        $updates = 0;
 
-    DB::transaction(function () use ($data, $pendingIds, &$updates) {
-        foreach ($data['relationship_map'] as $exhumationId => $rel) {
-            $id = (int) $exhumationId;
-            if (!in_array($id, $pendingIds, true)) continue;
+        DB::transaction(function () use ($data, $pendingIds, &$updates) {
+            foreach ($data['relationship_map'] as $exhumationId => $rel) {
+                $id = (int) $exhumationId;
+                if (!in_array($id, $pendingIds, true)) continue;
 
-            $value = (isset($rel) && trim($rel) !== '') ? strtoupper(trim($rel)) : null;
+                $value = (isset($rel) && trim($rel) !== '') ? strtoupper(trim($rel)) : null;
 
-            Exhumation::where('id', $id)->update([
-                'relationship_to_deceased' => $value,
-            ]);
-            $updates++;
-        }
-    });
+                Exhumation::where('id', $id)->update([
+                    'relationship_to_deceased' => $value,
+                ]);
+                $updates++;
+            }
+        });
 
-    return response()->json([
-        'message' => "Updated relationship for {$updates} pending exhumation(s).",
-        'updated' => $updates,
-    ]);
-}
+        return response()->json([
+            'message' => "Updated relationship for {$updates} pending exhumation(s).",
+            'updated' => $updates,
+        ]);
+    }
 
     public function deny(Exhumation $exhumation)
     {
+        $this->authorize('approve-deny');
+
         abort_if($exhumation->status !== 'pending', 400, 'Request already processed.');
 
         DB::transaction(function () use ($exhumation) {
@@ -453,6 +468,7 @@ public function bulkRelationships(Request $r, Exhumation $exhumation)
                     'from_slot' => $exhumation->from_slot_id,
                     'to_slot'   => $exhumation->to_slot_id,
                     'remarks'   => $exhumation->remarks,
+                    'for_cremation' => (bool) $exhumation->for_cremation,
                 ],
             ]);
         });
@@ -462,6 +478,8 @@ public function bulkRelationships(Request $r, Exhumation $exhumation)
 
     public function approve(Request $request, Exhumation $exhumation)
     {
+        $this->authorize('approve-deny');
+
         abort_if($exhumation->status !== 'pending', 400, 'Request already processed.');
 
         $data = $request->validate([
@@ -500,7 +518,6 @@ public function bulkRelationships(Request $r, Exhumation $exhumation)
 
         return back()->with('success', 'Exhumation request approved.');
     }
-
 
     private function purgeCellRenewals(int $cellId): void
     {
@@ -560,7 +577,6 @@ public function bulkRelationships(Request $r, Exhumation $exhumation)
             }
         }
 
-
         $sourceCellId = $from->grave_cell_id;
 
         $hasActive = Reservation::active()
@@ -570,7 +586,6 @@ public function bulkRelationships(Request $r, Exhumation $exhumation)
         if (! $hasActive) {
             $this->purgeCellRenewals($sourceCellId);
         }
-
 
         $this->releaseCellIfNoActiveBurials($sourceCellId);
     }
@@ -591,6 +606,8 @@ public function bulkRelationships(Request $r, Exhumation $exhumation)
 
     public function approveBatch(Request $request, Exhumation $exhumation)
     {
+        $this->authorize('approve-deny');
+
         $data = $request->validate([
             'or_number'    => 'required|string|max:50',
             'or_issued_at' => 'required|date',
@@ -645,6 +662,8 @@ public function bulkRelationships(Request $r, Exhumation $exhumation)
 
     public function denyBatch(Request $request, Exhumation $exhumation)
     {
+        $this->authorize('approve-deny');
+
         $fromSlot = \App\Models\Slot::with('cell')->findOrFail($exhumation->from_slot_id);
         $sourceCellId = $fromSlot->grave_cell_id;
 

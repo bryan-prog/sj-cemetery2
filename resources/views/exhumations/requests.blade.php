@@ -32,8 +32,12 @@
 
 @section('content')
 @php
-  $canModerate = auth()->check() && in_array(strtolower(auth()->user()->permission ?? ''), ['admin','super admin'], true);
+  // Permission flags for the current user
+  $canApproveDeny = auth()->check() && auth()->user()->can('approve-deny');
+  $canEditPermits = auth()->check() && auth()->user()->can('edit-permits');
+  $canPrintPermits = auth()->check() && auth()->user()->can('print-permits');
 @endphp
+
 <div class="container mt-4">
   <div class="card">
     <div class="card-header">
@@ -86,9 +90,7 @@
       @endphp
 
       <div class="mb-3 d-flex flex-wrap gap-2">
-        @php
-          $filters = ['pending' => 'Pending','exhumed' => 'Exhumed','all' => 'All'];
-        @endphp
+        @php $filters = ['pending' => 'Pending','exhumed' => 'Exhumed','all' => 'All']; @endphp
         @foreach($filters as $key => $label)
           <a href="{{ route('exhumations.requests', ['status' => $key]) }}"
              class="btn btn-sm {{ ($status === $key) ? 'btn-primary' : 'btn-outline-primary' }}">
@@ -165,22 +167,27 @@
                 <td><span class="badge {{ $badge }}">{{ $statusText }}</span></td>
 
                 <td class="text-end">
-                  <a href="{{ route('exhumations.permit', $ex) }}"
-                     target="_blank"
-                     class="btn btn-sm btn-primary"
-                     title="Print Permit">
-                    <i class="fa fa-print" aria-hidden="true"></i>
-                  </a>
-
-                  @if (!in_array($ex->status, ['approved','exhumed'], true))
-                  <button type="button"
-                          class="btn btn-sm btn-info edit-exh-btn"
-                          data-id="{{ $ex->id }}"
-                          title="View / Edit">
-                    <i class="fa fa-eye" aria-hidden="true"></i>
-                  </button>
+                  {{-- PRINT PERMIT (only if allowed) --}}
+                  @if($canPrintPermits)
+                    <a href="{{ route('exhumations.permit', $ex) }}"
+                       target="_blank"
+                       class="btn btn-sm btn-primary"
+                       title="Print Permit">
+                      <i class="fa fa-print" aria-hidden="true"></i>
+                    </a>
                   @endif
 
+                  {{-- VIEW / EDIT (edit only if allowed; still lets others view details) --}}
+                  @if (!in_array($ex->status, ['approved','exhumed'], true))
+                    <button type="button"
+                            class="btn btn-sm {{ $canEditPermits ? 'btn-info' : 'btn-default' }} edit-exh-btn"
+                            data-id="{{ $ex->id }}"
+                            title="{{ $canEditPermits ? 'View / Edit' : 'View details' }}">
+                      <i class="fa fa-eye" aria-hidden="true"></i>
+                    </button>
+                  @endif
+
+                  {{-- APPROVE / DENY (only if allowed) --}}
                   @if($ex->status === 'pending')
                     @if($originIsBulk)
                       <button type="button"
@@ -190,45 +197,45 @@
                         <i class="fa fa-users" aria-hidden="true"></i>
                       </button>
 
-                      @if($canModerate)
-                      <button type="button"
-                              class="btn btn-sm btn-primary approve-batch-btn"
-                              title="Mark all pending from this origin cell as Exhumed"
-                              data-toggle="modal"
-                              data-target="#approveBatchModal"
-                              data-batch-action="{{ route('exhumations.approveBatch', $ex) }}">
-                        <i class="fa fa-check-double" aria-hidden="true"></i>
-                      </button>
+                      @if($canApproveDeny)
+                        <button type="button"
+                                class="btn btn-sm btn-primary approve-batch-btn"
+                                title="Mark all pending from this origin cell as Exhumed"
+                                data-toggle="modal"
+                                data-target="#approveBatchModal"
+                                data-batch-action="{{ route('exhumations.approveBatch', $ex) }}">
+                          <i class="fa fa-check-double" aria-hidden="true"></i>
+                        </button>
 
-                      <button type="button"
-                              class="btn btn-sm btn-danger deny-batch-btn"
-                              title="Deny all pending from this origin cell"
-                              data-toggle="modal"
-                              data-target="#denyBatchModal"
-                              data-batch-action="{{ route('exhumations.denyBatch', $ex) }}">
-                        <i class="fa fa-times-circle" aria-hidden="true"></i>
-                      </button>
+                        <button type="button"
+                                class="btn btn-sm btn-danger deny-batch-btn"
+                                title="Deny all pending from this origin cell"
+                                data-toggle="modal"
+                                data-target="#denyBatchModal"
+                                data-batch-action="{{ route('exhumations.denyBatch', $ex) }}">
+                          <i class="fa fa-times-circle" aria-hidden="true"></i>
+                        </button>
                       @endif
                     @else
-                      @if($canModerate)
-                      <button type="button"
-                              class="btn btn-sm btn-success approve-btn"
-                              data-toggle="modal"
-                              data-target="#approveModal"
-                              data-action="{{ route('exhumations.approve', $ex) }}"
-                              title="Mark Exhumed">
-                        <i class="fa fa-check" aria-hidden="true"></i>
-                      </button>
-
-                      <form method="POST"
-                            action="{{ route('exhumations.deny', $ex) }}"
-                            class="d-inline"
-                            onsubmit="return confirm('Deny this request?');">
-                        @csrf
-                        <button class="btn btn-sm btn-danger" title="Deny">
-                          <i class="fa fa-times" aria-hidden="true"></i>
+                      @if($canApproveDeny)
+                        <button type="button"
+                                class="btn btn-sm btn-success approve-btn"
+                                data-toggle="modal"
+                                data-target="#approveModal"
+                                data-action="{{ route('exhumations.approve', $ex) }}"
+                                title="Mark Exhumed">
+                          <i class="fa fa-check" aria-hidden="true"></i>
                         </button>
-                      </form>
+
+                        <form method="POST"
+                              action="{{ route('exhumations.deny', $ex) }}"
+                              class="d-inline"
+                              onsubmit="return confirm('Deny this request?');">
+                          @csrf
+                          <button class="btn btn-sm btn-danger" title="Deny">
+                            <i class="fa fa-times" aria-hidden="true"></i>
+                          </button>
+                        </form>
                       @endif
                     @endif
                   @endif
@@ -243,7 +250,8 @@
   </div>
 </div>
 
-@if($canModerate)
+{{-- Approve/Deny modals only if user can approve/deny --}}
+@if($canApproveDeny)
 <div class="modal fade" id="approveModal" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered" role="document">
     <div class="modal-content">
@@ -349,6 +357,7 @@
 </div>
 @endif
 
+{{-- View/Edit modal: always available for viewing; edit controls only if allowed --}}
 <div class="modal fade" id="editExhModal" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-xl" role="document">
     <div class="modal-content">
@@ -421,49 +430,12 @@
         </div>
 
         <div class="modal-footer">
-          <button type="button" id="exEditSaveBtn" class="btn btn-danger" data-mode="view">Edit</button>
-          <button type="button" id="exCancelBtn" class="btn btn-secondary">Cancel</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
-
-<div class="modal fade" id="saveSuccessModal" tabindex="-1" role="dialog" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered" role="document">
-    <div class="modal-content">
-      <div class="modal-body text-center">
-        <div class="mb-2">
-          <img src="https://img.icons8.com/doodle/48/checked-checkbox.png" alt="Success"/>
-        </div>
-        <h5 class="mb-0" id="saveSuccessText">Saved successfully!</h5>
-      </div>
-      <div class="modal-footer py-2">
-        <button type="button" class="btn btn-success btn-sm" data-dismiss="modal">OK</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="modal fade" id="bulkRelModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered modal-lg">
-    <div class="modal-content">
-      <form id="bulkRelForm" method="POST">
-        <input type="hidden" name="_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="_method" value="PATCH">
-        <div class="modal-header">
-          <h5 class="modal-title">Set Relationship Per Occupant</h5>
-          <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
-        </div>
-        <div class="modal-body">
-          <div id="bulkRelBody"><div class="text-center p-3">Loading...</div></div>
-          <div class="alert alert-info small mb-0">
-            Only <strong>pending</strong> exhumations in this origin cell are editable here.
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-success">Save All</button>
+          @if($canEditPermits)
+            <button type="button" id="exEditSaveBtn" class="btn btn-danger" data-mode="view">Edit</button>
+            <button type="button" id="exCancelBtn" class="btn btn-secondary">Cancel</button>
+          @else
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+          @endif
         </div>
       </form>
     </div>
@@ -526,11 +498,13 @@ $(function () {
     $(this).addClass('table-active');
   });
 
+  // APPROVE (single)
   $(document).on('click', '.approve-btn', function () {
     $('#approveForm').attr('action', $(this).data('action'));
     $('#approveForm')[0]?.reset();
   });
 
+  // APPROVE/DENY (batch)
   $(document).on('click', '.approve-batch-btn', function () {
     $('#approveBatchForm').attr('action', $(this).data('batch-action'));
     $('#approveBatchForm')[0]?.reset();
@@ -546,17 +520,29 @@ $(function () {
 
   function setViewMode(isView) {
     var $fields = $('#editExhForm').find('input.ex-field, textarea.ex-field, select.ex-field');
+    var $editSave = $('#exEditSaveBtn');
+    var $cancel   = $('#exCancelBtn');
+
+    // If there is no Edit/Cancel (view-only user), keep everything read-only.
+    if (!$editSave.length) {
+      $fields.prop('disabled', true);
+      $('#editExhForm').find('input.ex-ro').prop('disabled', true);
+      return;
+    }
+
     $fields.prop('disabled', isView);
     $('#editExhForm').find('input.ex-ro').prop('disabled', true);
 
-    var $editSave = $('#exEditSaveBtn');
     if (isView) {
       $editSave.text('Edit').attr('data-mode', 'view').removeClass('btn-success').addClass('btn-danger');
+      if ($cancel.length) $cancel.text('Cancel');
     } else {
       $editSave.text('Save changes').attr('data-mode', 'save').removeClass('btn-danger').addClass('btn-success');
+      if ($cancel.length) $cancel.text('Discard');
     }
   }
 
+  // OPEN VIEW/EDIT MODAL
   $(document).on('click', '.edit-exh-btn', function (e) {
     e.preventDefault();
     e.stopPropagation();
@@ -594,19 +580,17 @@ $(function () {
         $('[name=dec_name]').val(data.deceased_name || '—');
         $('[name=dec_dod]').val(data.date_of_death || '—');
         $('[name=from_label]').val(data.from_label || '—');
-
-        $('#exEditSaveBtn').show().text('Edit').attr('data-mode','view');
-        $('#exCancelBtn').text('Cancel');
       })
       .fail(function (xhr) {
         var msg = 'Unable to load request details.';
-        if (xhr.status === 404) msg = 'Record not found (404). Check if the route exhumations.show exists and ID is valid.';
-        if (xhr.status === 419) msg = 'Session expired (419). Please refresh and try again.';
+        if (xhr.status === 404) msg = 'Record not found (404).';
+        if (xhr.status === 419) msg = 'Session expired (419). Please refresh.';
         $('#editExhErrors').removeClass('d-none').text(msg);
         $('[name=dec_name]').val('—');
       });
   });
 
+  // EDIT/SAVE (only present if user can edit)
   $('#exEditSaveBtn').on('click', function() {
     var mode = $(this).attr('data-mode');
     if (mode === 'view') {
@@ -618,7 +602,10 @@ $(function () {
   });
 
   $('#exCancelBtn').on('click', function () {
-    var mode = $('#exEditSaveBtn').attr('data-mode');
+    var $editSave = $('#exEditSaveBtn');
+    if (!$editSave.length) { $('#editExhModal').modal('hide'); return; }
+
+    var mode = $editSave.attr('data-mode');
     if (mode === 'save') {
       if (!loadedData) return;
       $('[name=requesting_party]').val(loadedData.requesting_party || '');
@@ -636,9 +623,12 @@ $(function () {
 
   $('#editExhForm').on('submit', function (e) {
     e.preventDefault();
+    var $editSave = $('#exEditSaveBtn');
+    if (!$editSave.length) { return; } // view-only users cannot submit
+
     if (!currentId) return;
 
-    var $btn = $('#exEditSaveBtn').prop('disabled', true);
+    var $btn = $editSave.prop('disabled', true);
     var formData = $(this).serialize();
 
     $.ajax({
@@ -691,6 +681,7 @@ $(function () {
     });
   });
 
+  // BULK relationship editor (available to all; only pending rows will be editable server-side)
   var bulkRelAnchorId = null;
 
   $(document).on('click', '.open-bulk-rel-btn', function(){

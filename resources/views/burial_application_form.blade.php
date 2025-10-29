@@ -25,6 +25,15 @@
     .gd-item{ display:flex; align-items:center; gap:8px; padding:.4rem .5rem; }
     .gd-item:hover{ background:#f8f9fa; }
     .gd-search{ position:sticky; top:0; background:#fff; padding:.5rem; border-bottom:1px solid #eee; }
+     @media screen and (max-width: 764px){
+      .row{
+        display: flex !important;
+        flex-direction: column !important;
+      }
+      .card-header.d-flex.justify-content-between {
+          flex-wrap: wrap !important;
+      }
+     }
 </style>
 
 @section('content')

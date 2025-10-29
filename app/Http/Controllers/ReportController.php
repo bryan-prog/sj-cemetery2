@@ -20,14 +20,14 @@ class ReportController extends Controller
     {
         $level = $request->input('level');
         $categories = Reservation::where('level_id', $level)->get();
-        $pdf = PDF::loadView('Report.print_report', compact('categories', 'level'));
+        $pdf = Pdf::loadView('Report.print_report', compact('categories', 'level'));
     }
 
     // BURIAL APPLICATION PERMIT (generic)
     public function Generate_Burial_Application_Permit()
     {
         $date = Carbon::now()->toFormattedDateString();
-        $pdf = PDF::loadView('Permits.burial_application_permit', ['date' => $date])
+        $pdf = Pdf::loadView('Permits.burial_application_permit', ['date' => $date])
                   ->setPaper('A4', 'Portrait');
         $pdf->setBasePath(public_path());
         return $pdf->stream();
@@ -37,7 +37,7 @@ class ReportController extends Controller
     public function Generate_Burial_Permit()
     {
         $date = Carbon::now()->toFormattedDateString();
-        $pdf = PDF::loadView('Permits.burial_permit', ['date' => $date])
+        $pdf = Pdf::loadView('Permits.burial_permit', ['date' => $date])
                   ->setPaper('A4', 'Portrait');
         $pdf->setBasePath(public_path());
         return $pdf->stream();
@@ -47,13 +47,11 @@ class ReportController extends Controller
     public function Generate_Exhumation_Permit()
     {
         $date = Carbon::now()->toFormattedDateString();
-        $pdf = PDF::loadView('Permits.exhumation_permit', ['date' => $date])
+        $pdf = Pdf::loadView('Permits.exhumation_permit', ['date' => $date])
                   ->setPaper('A4', 'Portrait');
         $pdf->setBasePath(public_path());
         return $pdf->stream();
     }
-
-
 
     private function ordinalUpper(int $n): string
     {
@@ -63,27 +61,21 @@ class ReportController extends Controller
         return strtoupper($n.$suffix);
     }
 
-
     private function apartmentLevelOnly(?\App\Models\Slot $slot = null, ?\App\Models\Reservation $reservation = null): ?string
     {
-
         $level = $slot?->cell?->level;
         $apartmentName = $level?->apartment?->name;
-
 
         if (!$apartmentName && $reservation) {
             $level = $level ?: $reservation->level;
             $apartmentName = $level?->apartment?->name ?: $reservation->burialSite?->name;
         }
 
-
         if (!$level || !$apartmentName) return null;
 
         $ord = $this->ordinalUpper((int) $level->level_no);
-
         return strtoupper(trim($apartmentName.' '.$ord.' LEVEL'));
     }
-
 
     private function ordinal(int $n): string
     {
@@ -109,7 +101,6 @@ class ReportController extends Controller
         );
     }
 
-
     private function formatGraveDiggers(\App\Models\Reservation $r): string
     {
         $names = $r->graveDiggersMany
@@ -126,8 +117,6 @@ class ReportController extends Controller
         return implode(' / ', $names);
     }
 
-
-
     public function generateRenewalPermit(Renewal $renewal)
     {
         $renewal->loadMissing('deceased', 'slot.cell.level.apartment', 'verifier');
@@ -137,7 +126,6 @@ class ReportController extends Controller
         $level = $cell?->level;
         $apt   = $level?->apartment;
         $aptName = $apt?->name ?? '—';
-
 
         $location = $this->apartmentLevelOnly($renewal->slot)
                  ?: (($level && $aptName !== '—')
@@ -178,8 +166,8 @@ class ReportController extends Controller
             ?: ($exhumation->current_location ?: '—');
 
         $transferDestination = $exhumation->to_slot_id
-            ? ($this->formatLocation($exhumation->toSlot) ?? '—')
-            : ($exhumation->current_location ?: '—');
+            ? ($this->formatLocation($exhumation->toSlot) ?? '—')   // inside transfer
+            : ($exhumation->current_location ?: '—');               // outside transfer
 
         $deceasedName = $dec?->name_of_deceased ?? '—';
         $deathDate    = $dec?->date_of_death ? Carbon::parse($dec->date_of_death)->format('F d, Y') : '—';
@@ -191,12 +179,15 @@ class ReportController extends Controller
         $feeNumeric   = is_null($exhumation->amount_as_per_ord) ? '—' : number_format((float)$exhumation->amount_as_per_ord, 2);
         $verifierName = $exhumation->verifier?->name_of_verifier ?? '—';
 
+        $isCremation  = (bool) ($exhumation->for_cremation ?? false);
+
         $pdf = Pdf::loadView('Permits.exhumation_permit', [
             'exhumation'          => $exhumation,
             'deceasedName'        => $deceasedName,
             'deathDate'           => $deathDate,
             'burialLocation'      => $burialLocation,
             'transferDestination' => $transferDestination,
+            'isCremation'         => $isCremation,
             'dateIssued'          => $dateIssued,
             'feeNumeric'          => $feeNumeric,
             'verifierName'        => $verifierName,
@@ -208,7 +199,6 @@ class ReportController extends Controller
 
     public function burialApplication(Request $request, Reservation $reservation)
     {
-
         $reservation->load([
             'deceased:id,first_name,middle_name,last_name,suffix,address_before_death,sex,date_of_birth,date_of_death',
             'burialSite:id,name',
@@ -232,7 +222,6 @@ class ReportController extends Controller
             $d?->first_name, $d?->middle_name, $d?->last_name, $d?->suffix,
         ])->filter()->implode(' '));
 
-
         $graveDiggersFormatted = $this->formatGraveDiggers($reservation);
 
         $burialLocation = $this->apartmentLevelOnly($reservation->slot, $reservation)
@@ -250,7 +239,6 @@ class ReportController extends Controller
             'dob'               => $d?->dob_ymd ?: '—',
             'dod'               => $d?->dod_ymd ?: '—',
 
-
             'burial_site'       => $reservation->location_or_apt_level,
 
             'amount'            => $reservation->amount_as_per_ord ?: '—',
@@ -259,7 +247,6 @@ class ReportController extends Controller
             'internment'        => ($reservation->internment_sched ?: '—'),
             'other_info'        => $reservation->other_info ?: '—',
             'verifier'          => $reservation->verifiers?->name_of_verifier ?: '—',
-
 
             'burialLocation'    => $burialLocation,
         ];

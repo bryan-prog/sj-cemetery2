@@ -14,6 +14,29 @@ class RenewalPermitController extends Controller
     private const RATE_APARTMENT_PER_YEAR  = 300.00;
     private const RATE_RESTOS_PER_YEAR     = 100.00;
 
+    public function __construct()
+    {
+        $this->middleware('auth');
+
+
+        $this->middleware(function ($request, $next) {
+            if (!$this->userCanEditPermits()) {
+                abort(403, 'Forbidden');
+            }
+            return $next($request);
+        })->only(['store','update','bulkRelationships']);
+
+
+        $this->middleware(function ($request, $next) {
+            if (!$this->userCanApproveDeny()) {
+                abort(403, 'Forbidden');
+            }
+            return $next($request);
+        })->only(['approve','deny','approveBatch','denyBatch']);
+    }
+
+
+
     public function index(Request $request)
     {
         $raw = $request->query('status', 'pending');
@@ -379,7 +402,6 @@ class RenewalPermitController extends Controller
                         'start' => optional($renewal->renewal_start)->toDateString(),
                         'end'   => optional($renewal->renewal_end)->toDateString(),
                     ],
-
                     'deceased'  => $renewal->deceased?->full_name ?? (
                         $renewal->deceased?->last_name
                             ? ($renewal->deceased->last_name.', '.($renewal->deceased->first_name ?? ''))
@@ -418,7 +440,6 @@ class RenewalPermitController extends Controller
                 'happened_at' => now(),
                 'details'     => [
                     'remarks'  => $renewal->remarks,
-
                     'deceased' => $renewal->deceased?->full_name ?? (
                         $renewal->deceased?->last_name
                         ? ($renewal->deceased->last_name . ', ' . ($renewal->deceased->first_name ?? ''))
@@ -483,11 +504,9 @@ class RenewalPermitController extends Controller
                     'count'       => $batch->count(),
                     'renewal_ids' => $batch->pluck('id')->values(),
                     'or_number'   => $data['or_number'] ?? null,
-
                     'deceased'    => $renewal->deceased?->full_name ?? null,
                     'location'    => $renewal->buried_at ?? null,
                 ],
-
             ]);
         });
 
@@ -540,11 +559,9 @@ class RenewalPermitController extends Controller
                     'count'       => $batch->count(),
                     'renewal_ids' => $batch->pluck('id')->values(),
                     'or_number'   => null,
-
                     'deceased'    => $renewal->deceased?->full_name ?? null,
                     'location'    => $renewal->buried_at ?? null,
                 ],
-
             ]);
         });
 
@@ -625,6 +642,8 @@ class RenewalPermitController extends Controller
             'updated' => $updates,
         ]);
     }
+
+
 
     private function resolvePeriod(array $payload, ?int $cellId, Carbon $ref): array
     {
@@ -769,5 +788,30 @@ class RenewalPermitController extends Controller
             : self::RATE_APARTMENT_PER_YEAR;
 
         return round($years * $rate, 2);
+    }
+
+
+
+    private function userCanApproveDeny(): bool
+    {
+        $u = auth()->user();
+        if (!$u) return false;
+
+        $perm = strtolower((string)($u->permission ?? ''));
+        if (in_array($perm, ['super admin','admin'], true)) return true;
+
+        return (bool)($u->can_approve_deny ?? false);
+    }
+
+    private function userCanEditPermits(): bool
+    {
+        $u = auth()->user();
+        if (!$u) return false;
+
+        $perm = strtolower((string)($u->permission ?? ''));
+        if (in_array($perm, ['super admin','admin'], true)) return true;
+
+        return (bool)($u->can_edit_permits ?? false);
+
     }
 }

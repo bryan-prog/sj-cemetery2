@@ -8,7 +8,6 @@
     <link rel="icon" href="{{asset('/assets/img/sjc.png')}}" type="image/png">
     @inject('carbon', 'Carbon\Carbon')
     <style>
-
         body{
             font-family:Arial, Helvetica, sans-serif;
         }
@@ -62,14 +61,20 @@
                 </ul>
             </div>
             <div class="row">
-                <p><b style="text-transform:uppercase;">(FOR TRANSFER: {{ $transferDestination ?? '—' }}.)</b></p>
+                <p>
+                    <b style="text-transform:uppercase;">
+                        (
+                        {{ !empty($isCremation) && $isCremation ? 'FOR CREMATION - TRANSFER LOCATION :' : 'FOR TRANSFER:' }}
+                        {{ $transferDestination ?? '—' }}.
+                        )
+                    </b>
+                </p>
             </div>
         </div>
         <div class="row" style="text-align:right;">
             <p><b>REQUESTED BY:</b></p><br>
-              <p><b>{{ $exhumation->requesting_party ?? '' }}</b></p>
+            <p><b>{{ $exhumation->requesting_party ?? '' }}</b></p>
             <p>Signature over Printed Name</p>
-
         </div>
         <div class="row" style="margin-bottom: 40px;">
             <h5>LOCATION VERIFIED BY:</h5>
@@ -82,13 +87,12 @@
                 </tr>
                 <tr style="text-align:center;">
                     <td>SAN JUAN CEMETERY STAFF</td>
-
                     <td>SUPERVISING ADMINISTRATIVE OFFICER</td>
                 </tr>
                 <tr style="text-align:center;">
-                <td></td>
-                <td>SAN JUAN CITY CEMETERY</td>
-            </tr>
+                    <td></td>
+                    <td>SAN JUAN CITY CEMETERY</td>
+                </tr>
             </table>
         </div>
     </div>

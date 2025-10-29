@@ -16,6 +16,12 @@
   .modal .form-control-label { color:black !important; }
   .modal .form-row { margin-left: 0; margin-right: 0; }
   .badge-readonly { font-size: .78rem; }
+  @media screen and (max-width: 764px){
+    .row{
+      display: flex !important;
+      flex-direction: column !important;
+    }
+  }
 </style>
 
 @section('content')

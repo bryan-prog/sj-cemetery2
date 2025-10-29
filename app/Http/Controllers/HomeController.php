@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\Hash;
 
 class HomeController extends Controller
 {
-   public function __construct()
+    public function __construct()
     {
         $this->middleware('auth');
     }
@@ -47,7 +47,6 @@ class HomeController extends Controller
         $death_nov= Deceased::whereYear('date_of_death', Carbon::now()->year)->whereMonth('date_of_death', '11')->count();
         $death_dec= Deceased::whereYear('date_of_death', Carbon::now()->year)->whereMonth('date_of_death', '12')->count();
 
-
         $ren_jan = Renewal::whereYear('date_applied', Carbon::now()->year)->whereMonth('date_applied', '01')->whereRaw('LOWER(status)=?',['approved'])->count();
         $ren_feb = Renewal::whereYear('date_applied', Carbon::now()->year)->whereMonth('date_applied', '02')->whereRaw('LOWER(status)=?',['approved'])->count();
         $ren_mar = Renewal::whereYear('date_applied', Carbon::now()->year)->whereMonth('date_applied', '03')->whereRaw('LOWER(status)=?',['approved'])->count();
@@ -60,6 +59,20 @@ class HomeController extends Controller
         $ren_oct = Renewal::whereYear('date_applied', Carbon::now()->year)->whereMonth('date_applied', '10')->whereRaw('LOWER(status)=?',['approved'])->count();
         $ren_nov = Renewal::whereYear('date_applied', Carbon::now()->year)->whereMonth('date_applied', '11')->whereRaw('LOWER(status)=?',['approved'])->count();
         $ren_dec = Renewal::whereYear('date_applied', Carbon::now()->year)->whereMonth('date_applied', '12')->whereRaw('LOWER(status)=?',['approved'])->count();
+
+
+        $exh_jan = Exhumation::whereYear('date_applied', Carbon::now()->year)->whereMonth('date_applied', '01')->whereRaw('LOWER(status)=?',['approved'])->count();
+        $exh_feb = Exhumation::whereYear('date_applied', Carbon::now()->year)->whereMonth('date_applied', '02')->whereRaw('LOWER(status)=?',['approved'])->count();
+        $exh_mar = Exhumation::whereYear('date_applied', Carbon::now()->year)->whereMonth('date_applied', '03')->whereRaw('LOWER(status)=?',['approved'])->count();
+        $exh_apr = Exhumation::whereYear('date_applied', Carbon::now()->year)->whereMonth('date_applied', '04')->whereRaw('LOWER(status)=?',['approved'])->count();
+        $exh_may = Exhumation::whereYear('date_applied', Carbon::now()->year)->whereMonth('date_applied', '05')->whereRaw('LOWER(status)=?',['approved'])->count();
+        $exh_jun = Exhumation::whereYear('date_applied', Carbon::now()->year)->whereMonth('date_applied', '06')->whereRaw('LOWER(status)=?',['approved'])->count();
+        $exh_jul = Exhumation::whereYear('date_applied', Carbon::now()->year)->whereMonth('date_applied', '07')->whereRaw('LOWER(status)=?',['approved'])->count();
+        $exh_aug = Exhumation::whereYear('date_applied', Carbon::now()->year)->whereMonth('date_applied', '08')->whereRaw('LOWER(status)=?',['approved'])->count();
+        $exh_sep = Exhumation::whereYear('date_applied', Carbon::now()->year)->whereMonth('date_applied', '09')->whereRaw('LOWER(status)=?',['approved'])->count();
+        $exh_oct = Exhumation::whereYear('date_applied', Carbon::now()->year)->whereMonth('date_applied', '10')->whereRaw('LOWER(status)=?',['approved'])->count();
+        $exh_nov = Exhumation::whereYear('date_applied', Carbon::now()->year)->whereMonth('date_applied', '11')->whereRaw('LOWER(status)=?',['approved'])->count();
+        $exh_dec = Exhumation::whereYear('date_applied', Carbon::now()->year)->whereMonth('date_applied', '12')->whereRaw('LOWER(status)=?',['approved'])->count();
 
         $overallTotal = $reservationTotal + $renewalPending + $exhumationPending;
 
@@ -81,7 +94,6 @@ class HomeController extends Controller
 
         if ($restos) {
             foreach ($restos->levels as $level) {
-
                 $busyStatuses = ['occupied', 'reserved', 'renewal_pending', 'exhumation_pending', 'for_penalty'];
 
                 $total = Slot::whereHas('cell', fn($q) => $q->where('level_id', $level->id))
@@ -110,9 +122,9 @@ class HomeController extends Controller
             'female_dead','male_dead',
             'death_jan','death_feb','death_mar','death_apr','death_may','death_jun','death_jul','death_aug','death_sep','death_oct','death_nov','death_dec',
             'ren_jan','ren_feb','ren_mar','ren_apr','ren_may','ren_jun','ren_jul','ren_aug','ren_sep','ren_oct','ren_nov','ren_dec',
+            'exh_jan','exh_feb','exh_mar','exh_apr','exh_may','exh_jun','exh_jul','exh_aug','exh_sep','exh_oct','exh_nov','exh_dec'
         ));
     }
-
 
     public function cemetery_data()
     {
@@ -120,11 +132,8 @@ class HomeController extends Controller
         return view('cemetery_data', compact('apartments'));
     }
 
-
     public function list_of_users()
     {
-
-
         if (Auth::user()->permission == 'Super Admin') {
             $users = User::all();
             return view('list_of_users', compact('users'));
@@ -138,14 +147,11 @@ class HomeController extends Controller
 
     public function user_details($id){
         $user = User::find($id);
-
         return Response::json($user);
-
         $user=User::all();
     }
-    
-    public function change_user_info(Request $request){
 
+    public function change_user_info(Request $request){
         $user = User::where('id', $request->info_id)->first();
 
         $user->lname = $request->last_name;
@@ -161,15 +167,12 @@ class HomeController extends Controller
         return back()->with('message', "Successfully changed user details!");
     }
 
-    //BURIAL APPLICATION
 
-    //EXHUMATION
     public function exhumation_application_form()
     {
         return view('exhumation_application_form');
     }
 
-    //test
     public function test()
     {
         return view('test');
@@ -187,7 +190,6 @@ class HomeController extends Controller
         return DataTables::of($User)
             ->setRowId('id')
             ->make(true);
-
     }
 
     public function Test_edit_user(Request $request)
@@ -202,24 +204,24 @@ class HomeController extends Controller
                 'permission' => $request->permission,
                 'active ' => $request->status,
                 'updated_at' => Carbon::now(),
-
             ]);
 
         return back()->with('message', 'Successfully updated user information!');
     }
-  public function changePassword(Request $request)
-{
-    $request->validate([
-        'info_id' => 'required|exists:users,id',
-        'change_password' => 'required|min:6',
-    ]);
 
-    $user = User::find($request->info_id);
-    $user->password = Hash::make($request->change_password);
-    $user->save();
+    public function changePassword(Request $request)
+    {
+        $request->validate([
+            'info_id' => 'required|exists:users,id',
+            'change_password' => 'required|min:6',
+        ]);
 
-    return redirect()->back()->with('success', 'Password successfully updated!');
-}
+        $user = User::find($request->info_id);
+        $user->password = Hash::make($request->change_password);
+        $user->save();
+
+        return redirect()->back()->with('success', 'Password successfully updated!');
+    }
 
     public function logs()
     {

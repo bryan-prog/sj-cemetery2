@@ -43,7 +43,11 @@
 @php
   $status = $status ?? request('status','pending');
   $showValidityCol = ($status !== 'pending');
-  $canModerate = auth()->check() && in_array(strtolower(auth()->user()->permission ?? ''), ['admin','super admin'], true);
+
+  $u = auth()->user();
+  $canApproveDeny = $u ? $u->can('approve-deny')   : false;
+  $canEdit        = $u ? $u->can('edit-permits')   : false;
+  $canPrint       = $u ? $u->can('print-permits')  : false;
 @endphp
 
 <div class="container mt-4">
@@ -210,11 +214,13 @@
                 @endif
 
                 <td class="text-end">
+                  @if($canPrint)
                   <a href="{{ url('/renewals/'.$r->id.'/permit') }}" target="_blank" class="btn btn-sm btn-primary" title="Print Permit">
                     <i class="fa fa-print" aria-hidden="true"></i>
                   </a>
+                  @endif
 
-                  @if ($rawStatus !== 'approved')
+                  @if ($rawStatus !== 'approved' && $canEdit)
                   <button type="button"
                           class="btn btn-sm btn-info edit-renewal-btn"
                           data-id="{{ $r->id }}"
@@ -225,14 +231,16 @@
 
                   @if ($r->status === 'pending')
                     @if($isMulti)
+                      @if($canEdit)
                       <button type="button"
                               class="btn btn-sm btn-dark open-bulk-rel-btn"
                               data-id="{{ $r->id }}"
                               title="Set relationship per occupant">
                         <i class="fa fa-users" aria-hidden="true"></i>
                       </button>
+                      @endif
 
-                      @if($canModerate)
+                      @if($canApproveDeny)
                       <button type="button"
                               class="btn btn-sm btn-primary approve-batch-btn"
                               data-toggle="modal"
@@ -252,7 +260,7 @@
                       </button>
                       @endif
                     @else
-                      @if($canModerate)
+                      @if($canApproveDeny)
                       <button type="button"
                               class="btn btn-sm btn-success approve-btn"
                               data-toggle="modal"
@@ -280,7 +288,7 @@
   </div>
 </div>
 
-@if($canModerate)
+@if($canApproveDeny)
 <div class="modal fade" id="approveModal" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered" role="document">
     <div class="modal-content">
