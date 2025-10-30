@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Carbon\Carbon;
-use App\Models\Renewal; // <-- ADDED
+use App\Models\Renewal;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class ExhumationPermitController extends Controller

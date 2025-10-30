@@ -1,3 +1,4 @@
+
 @extends('layouts.masterlayout')
 @inject('carbon','Carbon\Carbon')
 
@@ -14,6 +15,7 @@
     .inline-toggle { font-weight:normal; font-size:.95rem; }
     .toggle-group { display: flex; gap: 12px; flex-wrap: wrap; }
     .inline-toggle input[type="checkbox"] { margin-right: 8px; }
+
     .gd-wrapper{ position:relative; }
     .gd-input.form-control{ cursor:pointer; min-height:38px; display:flex; align-items:center; gap:6px; padding-right:36px; }
     .gd-tags{ display:flex; gap:6px; overflow-x:auto; white-space:nowrap; scrollbar-width: thin; }
@@ -25,15 +27,19 @@
     .gd-item{ display:flex; align-items:center; gap:8px; padding:.4rem .5rem; }
     .gd-item:hover{ background:#f8f9fa; }
     .gd-search{ position:sticky; top:0; background:#fff; padding:.5rem; border-bottom:1px solid #eee; }
-     @media screen and (max-width: 764px){
-      .row{
-        display: flex !important;
-        flex-direction: column !important;
-      }
-      .card-header.d-flex.justify-content-between {
-          flex-wrap: wrap !important;
-      }
-     }
+
+
+    .ind-modal { position: fixed; inset: 0; background: rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center; z-index: 2000; }
+    .ind-box   { background:#fff; border-radius:.5rem; width:420px; max-width:95vw; box-shadow:0 10px 30px rgba(0,0,0,.2); overflow:hidden; }
+    .ind-head  { padding:.85rem 1rem; font-weight:600; border-bottom:1px solid #e9ecef; }
+    .ind-body  { padding:1rem; }
+    .ind-foot  { padding:.75rem 1rem; border-top:1px solid #e9ecef; display:flex; gap:.5rem; justify-content:flex-end; }
+    .ind-error { color:#e3342f; font-size:.875rem; display:none; }
+
+    @media screen and (max-width: 764px){
+      .row{ display: flex !important; flex-direction: column !important; }
+      .card-header.d-flex.justify-content-between { flex-wrap: wrap !important; }
+    }
 </style>
 
 @section('content')
@@ -157,8 +163,7 @@
       <span><u>Deceased Information</u></span>
       <div class="toggle-group">
         <label class="mb-0 d-flex align-items-center inline-toggle">
-          <input type="checkbox" id="sameAddressToggle">
-          Same Address
+          <input type="checkbox" id="sameAddressToggle"> Same Address
         </label>
       </div>
     </h4>
@@ -166,7 +171,7 @@
     <div class="row">
         <div class="col-md-3">
             <label class="form-control-label required"><img src="https://img.icons8.com/doodle/20/name.png"/> First Name</label>
-            <input id="deceased_first_name" name="deceased_first_name" class="form-control" type="text" placeholder="">
+            <input id="deceased_first_name" name="deceased_first_name" class="form-control" type="text">
         </div>
         <div class="col-md-3">
             <label class="form-control-label"><img src="https://img.icons8.com/doodle/20/name.png"/> Middle Name</label>
@@ -184,7 +189,7 @@
     <div class="row mt-3">
         <div class="col-md-5">
             <label class="form-control-label required"><img src="https://img.icons8.com/doodle/20/marker--v1.png"/> Address Before Death</label>
-            <input id="address_before_death" name="address_before_death" class="form-control" type="text" placeholder="">
+            <input id="address_before_death" name="address_before_death" class="form-control" type="text">
         </div>
         <div class="col-md-2">
             <label class="form-control-label required"><img src="https://img.icons8.com/stickers/20/gender.png"/> Sex</label>
@@ -208,18 +213,36 @@
     <h4 class="text-red text-uppercase my-3"><u>Payment / Miscellaneous</u></h4>
     <div class="row">
         <div class="col-md-4">
-            <label class="form-control-label">
-              <img src="https://img.icons8.com/doodle/20/refund.png"/> Amount as per Ordinance.
-            </label>
+            <div class="d-flex align-items-center justify-content-between">
+              <label class="form-control-label mb-0">
+                <img src="https://img.icons8.com/doodle/20/refund.png"/> Amount as per Ordinance.
+              </label>
+            </div>
             <div class="input-group">
               <input id="amount_as_per_ord" name="amount_as_per_ord" class="form-control" type="text" placeholder="0.00" disabled>
             </div>
             <small id="oopNote" class="text-muted d-none">Filled via Order of Payment.</small>
+
+            {{-- <small id="indigentNote" class="text-success d-none d-block mt-1">
+              Indigent discount applied: ₱<span id="indigentNoteAmt">0.00</span>
+            </small>
+            <small id="waivedNote" class="text-danger d-none d-block mt-1">
+              Amount is waived; base set to ₱0.00.
+            </small> --}}
+
+
+            <input type="hidden" id="is_indigent" name="is_indigent" value="0">
+            <input type="hidden" id="indigent_discount" name="indigent_discount" value="0.00">
+            <input type="hidden" id="is_waived" name="is_waived" value="0">
+            <input type="hidden" id="misc_transfer_fee_hidden" name="misc_transfer_fee" value="0">
+            <input type="hidden" id="misc_review_dc_hidden" name="misc_review_dc" value="0">
         </div>
+
         <div class="col-md-4">
             <label class="form-control-label"><img src="https://img.icons8.com/plasticine/20/headstone.png"/> Funeral Service</label>
             <input id="funeral_service" name="funeral_service" class="form-control" type="text">
         </div>
+
         <div class="col-md-4">
             <label class="form-control-label">
               <img src="https://img.icons8.com/doodle/20/money.png"/> Miscellaneous (plus fees)
@@ -231,11 +254,44 @@
               <label class="inline-toggle d-flex align-items-center mb-1">
                 <input type="checkbox" id="misc_review_dc"> Review of Death Certificate <span class="ml-1">(₱100)</span>
               </label>
-              <small class="text-muted">Checked items are added on top of the base amount.</small>
 
+              <div class="d-flex align-items-center">
+                <label class="inline-toggle d-flex align-items-center mb-0 mr-3">
+                  <input type="checkbox" id="misc_indigent"> Indigent (Discount)
+                </label>
+                <button type="button" id="btnEditIndigent" class="btn btn-link btn-sm p-0 d-none">Edit amount</button>
+              </div>
 
+              <div class="d-flex align-items-center mt-1">
+                <label class="inline-toggle d-flex align-items-center mb-0">
+                  <input type="checkbox" id="misc_waived"> Waived
+                </label>
+              </div>
+
+              <small class="text-muted d-block mt-1">
+                Checked items are added on top of the base amount.
+              </small>
             </div>
         </div>
+    </div>
+
+
+    <div id="indigentModal" class="ind-modal d-none" role="dialog" aria-modal="true" aria-labelledby="indigentTitle">
+      <div class="ind-box">
+        <div class="ind-head" id="indigentTitle">Indigent Discount</div>
+        <div class="ind-body">
+          <p class="mb-2">Enter the amount to discount from the base ordinance amount.</p>
+          <div class="form-group mb-2">
+            <label class="form-control-label">Discount Amount (₱)</label>
+            <input type="number" min="0" step="0.01" class="form-control" id="indigentInput" placeholder="0.00">
+          </div>
+          <div class="ind-error" id="indigentError">Please enter a valid amount (not more than the base amount).</div>
+        </div>
+        <div class="ind-foot">
+          <button type="button" class="btn btn-secondary btn-sm" id="indigentCancel">Cancel</button>
+          <button type="button" class="btn btn-primary btn-sm" id="indigentSave">Save</button>
+        </div>
+      </div>
     </div>
 
     <hr class="mt-4 mb-4">
@@ -298,13 +354,40 @@
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script>
 $(function () {
+
     const FEE_TRANSFER = 200;
     const FEE_REVIEW   = 100;
-    const LS_TRANSFER = 'burial.misc.transfer';
-    const LS_REVIEW   = 'burial.misc.review';
+
+    const LS_TRANSFER      = 'burial.misc.transfer';
+    const LS_REVIEW        = 'burial.misc.review';
+    const LS_INDIGENT      = 'burial.misc.indigent';
+    const LS_INDIGENT_AMT  = 'burial.misc.indigent_amt';
+    const LS_WAIVED        = 'burial.misc.waived';
+
     let preselectLevelId = null;
     let baseAmount = null;
     const $amt = $('#amount_as_per_ord');
+
+    let indigentOn       = (localStorage.getItem(LS_INDIGENT) === '1');
+    let indigentDiscount = parseFloat(localStorage.getItem(LS_INDIGENT_AMT) || '0') || 0;
+    let waivedOn         = (localStorage.getItem(LS_WAIVED) === '1');
+
+    const $indigentCheckbox = $('#misc_indigent');
+    const $btnEditIndigent  = $('#btnEditIndigent');
+    const $indigentModal    = $('#indigentModal');
+    const $indigentInput    = $('#indigentInput');
+    const $indigentError    = $('#indigentError');
+    const $indigentNote     = $('#indigentNote');
+    const $indigentNoteAmt  = $('#indigentNoteAmt');
+    const $isIndigent       = $('#is_indigent');
+    const $indigentHidden   = $('#indigent_discount');
+
+    const $waivedCheckbox   = $('#misc_waived');
+    const $waivedNote       = $('#waivedNote');
+    const $isWaived         = $('#is_waived');
+
+    const $transferHidden   = $('#misc_transfer_fee_hidden');
+    const $reviewHidden     = $('#misc_review_dc_hidden');
 
     function setBaseAmount(val){
       const n = Number(val);
@@ -316,28 +399,144 @@ $(function () {
       if ($('#misc_review_dc').is(':checked'))   sum += FEE_REVIEW;
       return sum;
     }
-    function formatMoney(n){
-      return Number(n).toFixed(2);
+    function formatMoney(n){ return Number(n).toFixed(2); }
+
+    function updateIndigentUI(){
+      const disabledByWaive = waivedOn;
+      const showNote = indigentOn && indigentDiscount > 0 && !disabledByWaive;
+
+      $indigentCheckbox.prop('disabled', disabledByWaive)
+                       .closest('label').css('opacity', disabledByWaive ? .6 : 1);
+      $btnEditIndigent.prop('disabled', disabledByWaive)
+                      .toggleClass('d-none', !indigentOn || disabledByWaive);
+      $indigentNote.toggleClass('d-none', !showNote);
+      $indigentNoteAmt.text(formatMoney(indigentDiscount));
+
+      $isIndigent.val(indigentOn ? '1' : '0');
+      $indigentHidden.val(formatMoney(indigentDiscount));
     }
-    function recomputeTotal(){
-      const extras = extrasTotal();
-      if (baseAmount === null || !Number.isFinite(baseAmount)) {
-        if (extras > 0) $amt.val(formatMoney(extras));
-        return;
+
+    function updateWaivedUI(){
+      $waivedNote.toggleClass('d-none', !waivedOn);
+      $isWaived.val(waivedOn ? '1' : '0');
+
+      if (waivedOn) {
+        if (indigentOn || indigentDiscount) {
+          indigentOn = false;
+          indigentDiscount = 0;
+          $indigentCheckbox.prop('checked', false);
+          localStorage.setItem(LS_INDIGENT, '0');
+          localStorage.setItem(LS_INDIGENT_AMT, '0');
+        }
       }
-      $amt.val(formatMoney(baseAmount + extras));
+      updateIndigentUI();
     }
+
+    function recomputeTotal(){
+      const extras   = extrasTotal();
+      const baseRaw  = Number.isFinite(baseAmount) ? baseAmount : 0;
+      const baseEff  = waivedOn ? 0 : baseRaw;
+      const discount = (indigentOn && !waivedOn) ? Math.min(indigentDiscount, baseEff) : 0;
+      const total    = Math.max(0, (baseEff - discount)) + extras;
+
+      $amt.val(formatMoney(total));
+      updateWaivedUI();
+    }
+
 
     $('#misc_transfer_fee').prop('checked', localStorage.getItem(LS_TRANSFER) === '1');
     $('#misc_review_dc').prop('checked',   localStorage.getItem(LS_REVIEW) === '1');
+    $transferHidden.val($('#misc_transfer_fee').is(':checked') ? '1' : '0');
+    $reviewHidden.val($('#misc_review_dc').is(':checked') ? '1' : '0');
+
     $('#misc_transfer_fee').on('change', function(){
       localStorage.setItem(LS_TRANSFER, this.checked ? '1' : '0');
+      $transferHidden.val(this.checked ? '1' : '0');
       recomputeTotal();
     });
     $('#misc_review_dc').on('change', function(){
       localStorage.setItem(LS_REVIEW, this.checked ? '1' : '0');
+      $reviewHidden.val(this.checked ? '1' : '0');
       recomputeTotal();
     });
+
+
+    $indigentCheckbox.prop('checked', indigentOn);
+    updateIndigentUI();
+
+    $waivedCheckbox.prop('checked', waivedOn);
+    updateWaivedUI();
+
+    function openIndigentModal(){
+      $indigentError.hide();
+      $indigentInput.val(indigentDiscount ? formatMoney(indigentDiscount) : '');
+      $indigentModal.removeClass('d-none');
+    }
+    function closeIndigentModal(){ $indigentModal.addClass('d-none'); }
+
+    $indigentCheckbox.on('change', function(){
+      if (this.checked) {
+        indigentOn = true;
+        openIndigentModal();
+      } else {
+        indigentOn = false;
+        indigentDiscount = 0;
+        localStorage.setItem(LS_INDIGENT, '0');
+        localStorage.setItem(LS_INDIGENT_AMT, '0');
+        updateIndigentUI();
+        recomputeTotal();
+      }
+    });
+    $btnEditIndigent.on('click', function(e){
+      e.preventDefault();
+      openIndigentModal();
+    });
+
+    $('#indigentCancel').on('click', function(){
+      if (indigentOn && !indigentDiscount) {
+        $indigentCheckbox.prop('checked', false);
+        indigentOn = false;
+        localStorage.setItem(LS_INDIGENT, '0');
+      }
+      closeIndigentModal();
+      updateIndigentUI();
+    });
+
+    $('#indigentSave').on('click', function(){
+      const raw = $indigentInput.val();
+      let val = parseFloat(raw);
+      if (!Number.isFinite(val) || val < 0) {
+        $indigentError.text('Please enter a valid, non-negative amount.').show();
+        return;
+      }
+      const baseRaw = Number.isFinite(baseAmount) ? baseAmount : 0;
+      if (val > baseRaw) {
+        $indigentError.text('Discount cannot be greater than the base amount.').show();
+        return;
+      }
+      $indigentError.hide();
+
+      indigentOn = true;
+      indigentDiscount = val;
+      localStorage.setItem(LS_INDIGENT, '1');
+      localStorage.setItem(LS_INDIGENT_AMT, String(indigentDiscount));
+
+      updateIndigentUI();
+      recomputeTotal();
+      closeIndigentModal();
+    });
+
+    $indigentModal.on('click', function(e){
+      if (e.target === this) $('#indigentCancel').trigger('click');
+    });
+
+    $waivedCheckbox.on('change', function(){
+      waivedOn = this.checked;
+      localStorage.setItem(LS_WAIVED, waivedOn ? '1' : '0');
+      updateWaivedUI();
+      recomputeTotal();
+    });
+
 
     $('#burial_site_id').on('change', function () {
         const siteId = $(this).val();
@@ -371,20 +570,18 @@ $(function () {
         const formatted = Number(oopTotal).toFixed(2);
         $amt.val(formatted).prop('disabled', true).addClass('bg-light');
         $('#oopNote').removeClass('d-none');
-        $('#btnOOP').text('Edit OOP');
         setBaseAmount(Number(oopTotal));
         recomputeTotal();
     }
-
-    $('#btnOOP').on('click', function (e) {
-        e.preventDefault();
-        const currentUrl = window.location.href;
-        let target = '{{ route('order_of_payment') }}' + '?return_to=' + encodeURIComponent(currentUrl);
-        if (oopSel) {
-            target += '&selected=' + encodeURIComponent(oopSel);
-        }
-        window.location.href = target;
-    });
+    if ($('#btnOOP').length) {
+      $('#btnOOP').on('click', function (e) {
+          e.preventDefault();
+          const currentUrl = window.location.href;
+          let target = '{{ route('order_of_payment') }}' + '?return_to=' + encodeURIComponent(currentUrl);
+          if (oopSel) target += '&selected=' + encodeURIComponent(oopSel);
+          window.location.href = target;
+      });
+    }
 
     @if(request('family_id'))
       $.get(`{{ url('/api/families/search') }}`, { id: '{{ request('family_id') }}' }, function(rows){
@@ -500,7 +697,10 @@ $(function () {
         hideClientErrors();
         const errors = validateFormBeforeProceed();
         if (errors.length) { showClientErrors(errors); return; }
+
+
         recomputeTotal();
+
         const carriedSlotId = new URLSearchParams(window.location.search).get('selected_slot_id');
         if (carriedSlotId) {
             const $post = $('#saveReservationForm');
@@ -512,6 +712,8 @@ $(function () {
                     $post.append($('<input>', { type:'hidden', name, value: val ?? '' }));
                 }
             };
+
+
             add('no_lapida',            $('#no_lapida').val());
             add('deceased_first_name',  $('#deceased_first_name').val());
             add('deceased_middle_name', $('#deceased_middle_name').val());
@@ -540,12 +742,21 @@ $(function () {
             add('amount_as_per_ord',       $('#amount_as_per_ord').val());
             add('funeral_service',         $('#funeral_service').val());
             add('other_info',              $('#other_info').val());
+
+
+            add('misc_transfer_fee', $('#misc_transfer_fee').is(':checked') ? 1 : 0);
+            add('misc_review_dc',    $('#misc_review_dc').is(':checked') ? 1 : 0);
+            add('is_indigent',       $('#is_indigent').val());
+            add('indigent_discount', $('#indigent_discount').val());
+            add('is_waived',         $('#is_waived').val());
+
             $post.trigger('submit');
             return;
         }
         const levelId = $('#level_id').val();
         $('#burialForm').attr('action', `{{ url('/') }}/levels/${levelId}/reserve`).submit();
     });
+
 
     const MAX_GD = 5;
     const $native = $('#grave_diggers_id');
@@ -650,10 +861,13 @@ $(function () {
     }
     multiSelectWithoutCtrl('#grave_diggers_id');
 
+
     (function autoFillBurialAmount(){
       const $site = $('#burial_site_id');
+      const oopTotal = new URLSearchParams(window.location.search).get('oop_total');
       const hasOOP = !!oopTotal;
       function computeDefaultAmountBySiteName(nameText){
+
         const total = 3000 + 500;
         return total;
       }

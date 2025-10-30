@@ -19,7 +19,7 @@ class Reservation extends Model
         'applicant_first_name','applicant_middle_name','applicant_last_name','applicant_suffix',
         'applicant_address','applicant_contact_no',
         'relationship_to_deceased','amount_as_per_ord','funeral_service','renewal_date',
-        'other_info','internment_sched','family_id', 'applicant_email'
+        'other_info','internment_sched','family_id', 'applicant_email',  'misc_transfer_fee','misc_review_dc','is_indigent','indigent_discount','is_waived',
     ];
 
     protected $appends = [
@@ -31,6 +31,11 @@ class Reservation extends Model
         'date_applied'     => 'date',
         'internment_sched' => 'datetime',
         'renewal_date'     => 'date',
+        'misc_transfer_fee' => 'boolean',
+        'misc_review_dc'    => 'boolean',
+        'is_indigent'       => 'boolean',
+        'is_waived'         => 'boolean',
+        'indigent_discount' => 'decimal:2',
     ];
 
 

@@ -40,193 +40,223 @@ class BurialPermitController extends Controller
         return view('Level.grid', compact('level', 'burial_sites', 'verifiers'));
     }
 
-    public function store(Request $request)
-    {
-        $v = $request->validate([
-            'no_lapida'             => 'nullable|in:0,1',
+   public function store(Request $request)
+{
+    $v = $request->validate([
+        'no_lapida'             => 'nullable|in:0,1',
 
-            'deceased_first_name'   => 'required_without:no_lapida|string|max:255|nullable',
-            'deceased_middle_name'  => 'nullable|string|max:255',
-            'deceased_last_name'    => 'required_without:no_lapida|string|max:255|nullable',
-            'deceased_suffix'       => 'nullable|string|max:50',
-            'address_before_death'  => 'required_without:no_lapida|string|max:255|nullable',
-            'date_of_birth'         => 'required_without:no_lapida|date_format:Y-m-d|nullable',
-            'date_of_death'         => 'required_without:no_lapida|date_format:Y-m-d|after_or_equal:date_of_birth|nullable',
-            'sex'                   => 'required_without:no_lapida|in:MALE,FEMALE|nullable',
-            'applicant_email'       => 'nullable|email|max:255',
+        'deceased_first_name'   => 'required_without:no_lapida|string|max:255|nullable',
+        'deceased_middle_name'  => 'nullable|string|max:255',
+        'deceased_last_name'    => 'required_without:no_lapida|string|max:255|nullable',
+        'deceased_suffix'       => 'nullable|string|max:50',
+        'address_before_death'  => 'required_without:no_lapida|string|max:255|nullable',
+        'date_of_birth'         => 'required_without:no_lapida|date_format:Y-m-d|nullable',
+        'date_of_death'         => 'required_without:no_lapida|date_format:Y-m-d|after_or_equal:date_of_birth|nullable',
+        'sex'                   => 'required_without:no_lapida|in:MALE,FEMALE|nullable',
+        'applicant_email'       => 'nullable|email|max:255',
 
-            'level_id'              => 'required|exists:levels,id',
-            'slot_id'               => 'required|exists:slots,id',
+        'level_id'              => 'required|exists:levels,id',
+        'slot_id'               => 'required|exists:slots,id',
 
-            'grave_diggers_id'      => 'required|array|min:1|max:5',
-            'grave_diggers_id.*'    => 'distinct|exists:grave_diggers,id',
+        'grave_diggers_id'      => 'required|array|min:1|max:5',
+        'grave_diggers_id.*'    => 'distinct|exists:grave_diggers,id',
 
-            'verifiers_id'          => 'required|exists:verifiers,id',
-            'burial_site_id'        => 'required|exists:burial_sites,id',
+        'verifiers_id'          => 'required|exists:verifiers,id',
+        'burial_site_id'        => 'required|exists:burial_sites,id',
 
-            'date_applied'          => 'required|date_format:Y-m-d',
-            'internment_sched'      => ['required','regex:/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/'],
+        'date_applied'          => 'required|date_format:Y-m-d',
+        'internment_sched'      => ['required','regex:/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/'],
 
-            'applicant_first_name'  => 'required|string|max:100',
-            'applicant_middle_name' => 'nullable|string|max:100',
-            'applicant_last_name'   => 'required|string|max:100',
-            'applicant_suffix'      => 'nullable|string|max:20',
+        'applicant_first_name'  => 'required|string|max:100',
+        'applicant_middle_name' => 'nullable|string|max:100',
+        'applicant_last_name'   => 'required|string|max:100',
+        'applicant_suffix'      => 'nullable|string|max:20',
 
-            'family_id'                 => 'nullable|exists:families,id',
-            'applicant_address'         => 'nullable|string|max:255',
-            'applicant_contact_no'      => 'nullable|string|max:50',
-            'relationship_to_deceased'  => 'required|string|max:100',
-            'amount_as_per_ord'         => 'nullable|string|max:50',
-            'funeral_service'           => 'nullable|string|max:100',
-            'other_info'                => 'nullable|string',
+        'family_id'                 => 'nullable|exists:families,id',
+        'applicant_address'         => 'nullable|string|max:255',
+        'applicant_contact_no'      => 'nullable|string|max:50',
+        'relationship_to_deceased'  => 'required|string|max:100',
+        'amount_as_per_ord'         => 'nullable|string|max:50',
+        'funeral_service'           => 'nullable|string|max:100',
+        'other_info'                => 'nullable|string',
+
+
+        'misc_transfer_fee'   => 'nullable|boolean',
+        'misc_review_dc'      => 'nullable|boolean',
+        'is_indigent'         => 'nullable|boolean',
+        'indigent_discount'   => 'nullable|numeric|min:0',
+        'is_waived'           => 'nullable|boolean',
+    ]);
+
+    foreach ([
+        'deceased_first_name','deceased_middle_name','deceased_last_name','deceased_suffix',
+        'applicant_first_name','applicant_middle_name','applicant_last_name','applicant_suffix'
+    ] as $k) {
+        if (isset($v[$k])) {
+            $v[$k] = preg_replace('/\s+/', ' ', trim($v[$k]));
+        }
+    }
+
+    $noLapida = (string)($v['no_lapida'] ?? '0') === '1';
+
+    $v['date_applied']     = \Carbon\Carbon::parse($v['date_applied'])->format('Y-m-d');
+    $v['internment_sched'] = \Carbon\Carbon::parse(str_replace('T',' ',$v['internment_sched']))->format('Y-m-d H:i:s');
+
+    if (!$noLapida) {
+        $v['date_of_birth'] = \Carbon\Carbon::parse($v['date_of_birth'])->format('Y-m-d');
+        $v['date_of_death'] = \Carbon\Carbon::parse($v['date_of_death'])->format('Y-m-d');
+    } else {
+        $v['deceased_first_name']  = 'NO LAPIDA';
+        $v['deceased_middle_name'] = null;
+        $v['deceased_last_name']   = null;
+        $v['deceased_suffix']      = null;
+        $v['sex']                  = null;
+        $v['date_of_birth']        = null;
+        $v['date_of_death']        = null;
+        $v['address_before_death'] = $v['address_before_death'] ?? null;
+    }
+
+    $gdIds = array_values(array_unique(array_map('intval', (array) $v['grave_diggers_id'])));
+
+
+    $transferOn = $request->boolean('misc_transfer_fee');
+    $reviewOn   = $request->boolean('misc_review_dc');
+    $waivedOn   = $request->boolean('is_waived');
+    $indigentOn = $request->boolean('is_indigent');
+    $indDisc    = (float) str_replace(',', '', (string)($request->input('indigent_discount', 0)));
+
+
+    if (!isset($v['amount_as_per_ord']) || trim((string)$v['amount_as_per_ord']) === '') {
+        $v['amount_as_per_ord'] = number_format(
+            $this->computeBurialAmount((int)$v['burial_site_id']),
+            2, '.', ''
+        );
+    }
+
+    DB::transaction(function () use ($v, $gdIds, $transferOn, $reviewOn, $waivedOn, $indigentOn, $indDisc) {
+
+        $deceased = Deceased::create([
+            'first_name'           => $v['deceased_first_name'],
+            'middle_name'          => $v['deceased_middle_name'] ?? null,
+            'last_name'            => $v['deceased_last_name'],
+            'suffix'               => $v['deceased_suffix'] ?? null,
+            'address_before_death' => $v['address_before_death'] ?? null,
+            'sex'                  => $v['sex'] ?? null,
+            'date_of_birth'        => $v['date_of_birth'] ?? null,
+            'date_of_death'        => $v['date_of_death'] ?? null,
         ]);
 
-        foreach ([
-            'deceased_first_name','deceased_middle_name','deceased_last_name','deceased_suffix',
-            'applicant_first_name','applicant_middle_name','applicant_last_name','applicant_suffix'
-        ] as $k) {
-            if (isset($v[$k])) {
-                $v[$k] = preg_replace('/\s+/', ' ', trim($v[$k]));
+        $familyId = $v['family_id'] ?? null;
+        if (!$familyId) {
+            $last = strtoupper(trim($v['deceased_last_name'] ?? ''));
+            if ($last === '') {
+                $last = strtoupper(trim($v['applicant_last_name'] ?? 'UNSPECIFIED'));
             }
+            $family = Family::firstOrCreate(['name' => $last . ' FAMILY']);
+            $familyId = $family->id;
         }
 
-        $noLapida = (string)($v['no_lapida'] ?? '0') === '1';
-
-        $v['date_applied']     = Carbon::parse($v['date_applied'])->format('Y-m-d');
-        $v['internment_sched'] = Carbon::parse(str_replace('T',' ',$v['internment_sched']))->format('Y-m-d H:i:s');
-
-        if (!$noLapida) {
-            $v['date_of_birth'] = Carbon::parse($v['date_of_birth'])->format('Y-m-d');
-            $v['date_of_death'] = Carbon::parse($v['date_of_death'])->format('Y-m-d');
-        } else {
-            $v['deceased_first_name']  = 'NO LAPIDA';
-            $v['deceased_middle_name'] = null;
-            $v['deceased_last_name']   = null;
-            $v['deceased_suffix']      = null;
-            $v['sex']                  = null;
-            $v['date_of_birth']        = null;
-            $v['date_of_death']        = null;
-            $v['address_before_death'] = $v['address_before_death'] ?? null;
-        }
-
-        $gdIds = array_values(array_unique(array_map('intval', (array) $v['grave_diggers_id'])));
-
-
-        if (!isset($v['amount_as_per_ord']) || trim((string)$v['amount_as_per_ord']) === '') {
-            $v['amount_as_per_ord'] = number_format(
-                $this->computeBurialAmount((int)$v['burial_site_id']),
-                2, '.', ''
-            );
-        }
-
-
-        DB::transaction(function () use ($v, $gdIds) {
-
-            $deceased = Deceased::create([
-                'first_name'           => $v['deceased_first_name'],
-                'middle_name'          => $v['deceased_middle_name'] ?? null,
-                'last_name'            => $v['deceased_last_name'],
-                'suffix'               => $v['deceased_suffix'] ?? null,
-                'address_before_death' => $v['address_before_death'] ?? null,
-                'sex'                  => $v['sex'] ?? null,
-                'date_of_birth'        => $v['date_of_birth'] ?? null,
-                'date_of_death'        => $v['date_of_death'] ?? null,
+        $slot = Slot::lockForUpdate()->findOrFail($v['slot_id']);
+        if ($slot->status !== 'available') {
+            throw ValidationException::withMessages([
+                'slot_id' => ['Selected slot is no longer available.'],
             ]);
+        }
 
-            $familyId = $v['family_id'] ?? null;
-            if (!$familyId) {
-                $last = strtoupper(trim($v['deceased_last_name'] ?? ''));
-                if ($last === '') {
-                    $last = strtoupper(trim($v['applicant_last_name'] ?? 'UNSPECIFIED'));
-                }
-                $family = Family::firstOrCreate(['name' => $last . ' FAMILY']);
-                $familyId = $family->id;
-            }
+        $cell = GraveCell::lockForUpdate()->find($slot->grave_cell_id);
 
-            $slot = Slot::lockForUpdate()->findOrFail($v['slot_id']);
-            if ($slot->status !== 'available') {
-                throw ValidationException::withMessages([
-                    'slot_id' => ['Selected slot is no longer available.'],
-                ]);
-            }
+        $activeRes = Reservation::active()
+            ->whereHas('slot', fn($q) => $q->where('grave_cell_id', $cell->id))
+            ->whereNotNull('family_id')
+            ->first();
 
-            $cell = GraveCell::lockForUpdate()->find($slot->grave_cell_id);
-
-            $activeRes = Reservation::active()
-                ->whereHas('slot', fn($q) => $q->where('grave_cell_id', $cell->id))
-                ->whereNotNull('family_id')
-                ->first();
-
-            $cellOwnerId = $cell->family_id ?: optional($activeRes)->family_id;
-            if ($cellOwnerId && (int)$cellOwnerId !== (int)$familyId) {
-                throw ValidationException::withMessages([
-                    'slot_id' => ['This grave cell is reserved for another family. Please choose a different cell.'],
-                ]);
-            }
-            if (!$cellOwnerId) {
-                $cell->update(['family_id' => $familyId]);
-            }
-
-            $slot->update(['status' => 'occupied']);
-
-            $primaryGdId = $gdIds[0] ?? null;
-
-            $reservation = Reservation::create([
-                'level_id'                 => $v['level_id'],
-                'burial_site_id'           => $v['burial_site_id'],
-                'deceased_id'              => $deceased->id,
-                'grave_diggers_id'         => $primaryGdId,
-                'verifiers_id'             => $v['verifiers_id'],
-                'slot_id'                  => $slot->id,
-                'family_id'                => $familyId,
-
-                'date_applied'             => $v['date_applied'],
-
-                'applicant_first_name'     => $v['applicant_first_name'],
-                'applicant_middle_name'    => $v['applicant_middle_name'] ?? null,
-                'applicant_last_name'      => $v['applicant_last_name'],
-                'applicant_suffix'         => $v['applicant_suffix'] ?? null,
-
-                'applicant_address'        => $v['applicant_address'] ?? null,
-                'applicant_contact_no'     => $v['applicant_contact_no'] ?? null,
-                'applicant_email'          => $v['applicant_email'] ?? null,
-                'relationship_to_deceased' => $v['relationship_to_deceased'],
-                'amount_as_per_ord'        => $v['amount_as_per_ord'] ?? null,
-                'funeral_service'          => $v['funeral_service'] ?? null,
-                'other_info'               => $v['other_info'] ?? null,
-                'internment_sched'         => $v['internment_sched'],
+        $cellOwnerId = $cell->family_id ?: optional($activeRes)->family_id;
+        if ($cellOwnerId && (int)$cellOwnerId !== (int)$familyId) {
+            throw ValidationException::withMessages([
+                'slot_id' => ['This grave cell is reserved for another family. Please choose a different cell.'],
             ]);
+        }
+        if (!$cellOwnerId) {
+            $cell->update(['family_id' => $familyId]);
+        }
 
-            $reservation->graveDiggersMany()->sync($gdIds);
+        $slot->update(['status' => 'occupied']);
 
-            $user     = auth()->user();
-            $username = $user?->username ?? trim(($user->fname ?? '') . ' ' . ($user->lname ?? '')) ?: null;
+        $primaryGdId = $gdIds[0] ?? null;
 
-            $dec = $reservation->deceased;
-            $deceasedName = $dec?->full_name
-                ?? ($dec?->last_name ? ($dec->last_name . ', ' . ($dec->first_name ?? '')) : null);
+        $reservation = Reservation::create([
+            'level_id'                 => $v['level_id'],
+            'burial_site_id'           => $v['burial_site_id'],
+            'deceased_id'              => $deceased->id,
+            'grave_diggers_id'         => $primaryGdId,
+            'verifiers_id'             => $v['verifiers_id'],
+            'slot_id'                  => $slot->id,
+            'family_id'                => $familyId,
 
-            $location = $reservation->location_or_apt_level;
+            'date_applied'             => $v['date_applied'],
 
-            ActionLog::create([
-                'user_id'     => $user?->id,
-                'username'    => $username,
-                'action'      => 'reservation.created',
-                'target_type' => \App\Models\Reservation::class,
-                'target_id'   => $reservation->id,
-                'happened_at' => now(),
-                'details'     => [
-                    'deceased'         => $deceasedName,
-                    'location'         => $location,
-                    'applicant'        => $reservation->applicant_name,
-                    'relationship'     => $reservation->relationship_to_deceased,
-                    'internment_sched' => optional($reservation->internment_sched)->format('Y-m-d H:i:s'),
+            'applicant_first_name'     => $v['applicant_first_name'],
+            'applicant_middle_name'    => $v['applicant_middle_name'] ?? null,
+            'applicant_last_name'      => $v['applicant_last_name'],
+            'applicant_suffix'         => $v['applicant_suffix'] ?? null,
+
+            'applicant_address'        => $v['applicant_address'] ?? null,
+            'applicant_contact_no'     => $v['applicant_contact_no'] ?? null,
+            'applicant_email'          => $v['applicant_email'] ?? null,
+            'relationship_to_deceased' => $v['relationship_to_deceased'],
+            'amount_as_per_ord'        => $v['amount_as_per_ord'] ?? null,
+            'funeral_service'          => $v['funeral_service'] ?? null,
+            'other_info'               => $v['other_info'] ?? null,
+            'internment_sched'         => $v['internment_sched'],
+
+
+            'misc_transfer_fee'        => $transferOn,
+            'misc_review_dc'           => $reviewOn,
+            'is_indigent'              => $indigentOn,
+            'indigent_discount'        => $indDisc,
+            'is_waived'                => $waivedOn,
+        ]);
+
+        $reservation->graveDiggersMany()->sync($gdIds);
+
+        $user     = auth()->user();
+        $username = $user?->username ?? trim(($user->fname ?? '') . ' ' . ($user->lname ?? '')) ?: null;
+
+        $dec = $reservation->deceased;
+        $deceasedName = $dec?->full_name
+            ?? ($dec?->last_name ? ($dec->last_name . ', ' . ($dec->first_name ?? '')) : null);
+
+        $location = $reservation->location_or_apt_level;
+
+        ActionLog::create([
+            'user_id'     => $user?->id,
+            'username'    => $username,
+            'action'      => 'reservation.created',
+            'target_type' => \App\Models\Reservation::class,
+            'target_id'   => $reservation->id,
+            'happened_at' => now(),
+            'details'     => [
+                'deceased'         => $deceasedName,
+                'location'         => $location,
+                'applicant'        => $reservation->applicant_name,
+                'relationship'     => $reservation->relationship_to_deceased,
+                'internment_sched' => optional($reservation->internment_sched)->format('Y-m-d H:i:s'),
+
+
+                'fees' => [
+                    'transfer_fee'      => (bool) $transferOn,
+                    'review_dc'         => (bool) $reviewOn,
+                    'is_indigent'       => (bool) $indigentOn,
+                    'indigent_discount' => number_format($indDisc, 2, '.', ''),
+                    'is_waived'         => (bool) $waivedOn,
+                    'amount_as_per_ord' => $reservation->amount_as_per_ord,
                 ],
-            ]);
-        });
+            ],
+        ]);
+    });
 
-        return redirect()->route('Homepage')->with('success','Reservation saved successfully!');
-    }
+    return redirect()->route('Homepage')->with('success','Reservation saved successfully!');
+}
 
     public function levels(BurialSite $site)  { return $site->levels()->select('id','level_no')->get(); }
     public function cells(Level $level)       { return $level->cells()->select('id','row_no','col_no')->get(); }
