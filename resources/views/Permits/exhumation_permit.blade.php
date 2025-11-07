@@ -61,14 +61,12 @@
                 </ul>
             </div>
             <div class="row">
-                <p>
-                    <b style="text-transform:uppercase;">
-                        (
-                        {{ !empty($isCremation) && $isCremation ? 'FOR CREMATION - TRANSFER LOCATION :' : 'FOR TRANSFER:' }}
-                        {{ $transferDestination ?? '—' }}.
-                        )
-                    </b>
-                </p>
+               @php($line = isset($transferLine) ? $transferLine : '—')
+<p>
+  <b style="text-transform:uppercase;">
+    ({{ $line }}.)
+  </b>
+</p>
             </div>
         </div>
         <div class="row" style="text-align:right;">

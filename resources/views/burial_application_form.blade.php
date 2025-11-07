@@ -28,13 +28,20 @@
     .gd-item:hover{ background:#f8f9fa; }
     .gd-search{ position:sticky; top:0; background:#fff; padding:.5rem; border-bottom:1px solid #eee; }
 
-
     .ind-modal { position: fixed; inset: 0; background: rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center; z-index: 2000; }
     .ind-box   { background:#fff; border-radius:.5rem; width:420px; max-width:95vw; box-shadow:0 10px 30px rgba(0,0,0,.2); overflow:hidden; }
     .ind-head  { padding:.85rem 1rem; font-weight:600; border-bottom:1px solid #e9ecef; }
     .ind-body  { padding:1rem; }
     .ind-foot  { padding:.75rem 1rem; border-top:1px solid #e9ecef; display:flex; gap:.5rem; justify-content:flex-end; }
     .ind-error { color:#e3342f; font-size:.875rem; display:none; }
+
+
+    .loading-modal{ position:fixed; inset:0; background:rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center; z-index:4000; }
+    .loading-modal.d-none{ display:none; }
+    .loading-box{ background:#fff; padding:18px 20px; border-radius:10px; width:340px; max-width:95vw; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.2); }
+    .loading-spinner{ width:48px; height:48px; border-radius:50%; border:4px solid #e9ecef; border-top-color:#3490dc; animation:spin 1s linear infinite; margin:8px auto 12px; }
+    @keyframes spin{ to{ transform:rotate(360deg); } }
+    .loading-tips{ font-size:.875rem; color:#6c757d; }
 
     @media screen and (max-width: 764px){
       .row{ display: flex !important; flex-direction: column !important; }
@@ -223,13 +230,13 @@
             </div>
             <small id="oopNote" class="text-muted d-none">Filled via Order of Payment.</small>
 
-            {{-- <small id="indigentNote" class="text-success d-none d-block mt-1">
+            {{-- Optional: show live notes
+            <small id="indigentNote" class="text-success d-none d-block mt-1">
               Indigent discount applied: ₱<span id="indigentNoteAmt">0.00</span>
             </small>
             <small id="waivedNote" class="text-danger d-none d-block mt-1">
               Amount is waived; base set to ₱0.00.
             </small> --}}
-
 
             <input type="hidden" id="is_indigent" name="is_indigent" value="0">
             <input type="hidden" id="indigent_discount" name="indigent_discount" value="0.00">
@@ -274,7 +281,6 @@
             </div>
         </div>
     </div>
-
 
     <div id="indigentModal" class="ind-modal d-none" role="dialog" aria-modal="true" aria-labelledby="indigentTitle">
       <div class="ind-box">
@@ -342,18 +348,60 @@
    </div>
   </form>
 
+  {{-- Hidden save form that posts the reservation --}}
   <form id="saveReservationForm"
         action="{{ route('reservations.store') }}"
         method="POST"
         class="d-none">
     @csrf
   </form>
+
+  {{-- Loading / Saving overlay --}}
+  <div id="savingModal" class="loading-modal d-none" role="dialog" aria-modal="true" aria-labelledby="savingModalTitle">
+    <div class="loading-box">
+      <div class="loading-spinner" aria-hidden="true"></div>
+      <h5 id="savingModalTitle" class="mb-1">Saving reservation…</h5>
+      <div class="loading-tips">Please don't close this tab.</div>
+    </div>
+  </div>
  </div>
 </div>
 
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script>
 $(function () {
+
+    /* === Loading modal helpers === */
+    let submitting = false;
+    let prevChooseText = null;
+    function showSaving() {
+      $('#savingModal').removeClass('d-none');
+      const $btn = $('#chooseSlot');
+      if ($btn.length) {
+        prevChooseText = $btn.text();
+        $btn.prop('disabled', true).text('Saving…');
+      }
+    }
+    function hideSaving() {
+      $('#savingModal').addClass('d-none');
+      const $btn = $('#chooseSlot');
+      if ($btn.length && prevChooseText !== null) {
+        $btn.prop('disabled', false).text(prevChooseText);
+        prevChooseText = null;
+      }
+    }
+
+    // If browser restores from bfcache, ensure overlay is hidden
+    window.addEventListener('pageshow', function(event){
+      if (event.persisted) hideSaving();
+    });
+
+    // Show overlay whenever the hidden save form submits
+    $('#saveReservationForm').on('submit', function () {
+      showSaving();
+    });
+
+    /* === Existing script === */
 
     const FEE_TRANSFER = 200;
     const FEE_REVIEW   = 100;
@@ -410,7 +458,7 @@ $(function () {
       $btnEditIndigent.prop('disabled', disabledByWaive)
                       .toggleClass('d-none', !indigentOn || disabledByWaive);
       $indigentNote.toggleClass('d-none', !showNote);
-      $indigentNoteAmt.text(formatMoney(indigentDiscount));
+      $indigentNoteAmt && $indigentNoteAmt.text(formatMoney(indigentDiscount));
 
       $isIndigent.val(indigentOn ? '1' : '0');
       $indigentHidden.val(formatMoney(indigentDiscount));
@@ -443,7 +491,6 @@ $(function () {
       updateWaivedUI();
     }
 
-
     $('#misc_transfer_fee').prop('checked', localStorage.getItem(LS_TRANSFER) === '1');
     $('#misc_review_dc').prop('checked',   localStorage.getItem(LS_REVIEW) === '1');
     $transferHidden.val($('#misc_transfer_fee').is(':checked') ? '1' : '0');
@@ -459,7 +506,6 @@ $(function () {
       $reviewHidden.val(this.checked ? '1' : '0');
       recomputeTotal();
     });
-
 
     $indigentCheckbox.prop('checked', indigentOn);
     updateIndigentUI();
@@ -536,7 +582,6 @@ $(function () {
       updateWaivedUI();
       recomputeTotal();
     });
-
 
     $('#burial_site_id').on('change', function () {
         const siteId = $(this).val();
@@ -694,15 +739,18 @@ $(function () {
     }
 
     $('#chooseSlot').on('click', function () {
+        if (submitting) return;
+
         hideClientErrors();
         const errors = validateFormBeforeProceed();
         if (errors.length) { showClientErrors(errors); return; }
-
 
         recomputeTotal();
 
         const carriedSlotId = new URLSearchParams(window.location.search).get('selected_slot_id');
         if (carriedSlotId) {
+            submitting = true;
+
             const $post = $('#saveReservationForm');
             $post.find('input:not([name="_token"])').remove();
             const add = (name, val) => {
@@ -712,7 +760,6 @@ $(function () {
                     $post.append($('<input>', { type:'hidden', name, value: val ?? '' }));
                 }
             };
-
 
             add('no_lapida',            $('#no_lapida').val());
             add('deceased_first_name',  $('#deceased_first_name').val());
@@ -743,20 +790,21 @@ $(function () {
             add('funeral_service',         $('#funeral_service').val());
             add('other_info',              $('#other_info').val());
 
-
             add('misc_transfer_fee', $('#misc_transfer_fee').is(':checked') ? 1 : 0);
             add('misc_review_dc',    $('#misc_review_dc').is(':checked') ? 1 : 0);
             add('is_indigent',       $('#is_indigent').val());
             add('indigent_discount', $('#indigent_discount').val());
             add('is_waived',         $('#is_waived').val());
 
+            showSaving();
             $post.trigger('submit');
             return;
         }
+
+
         const levelId = $('#level_id').val();
         $('#burialForm').attr('action', `{{ url('/') }}/levels/${levelId}/reserve`).submit();
     });
-
 
     const MAX_GD = 5;
     const $native = $('#grave_diggers_id');
@@ -861,13 +909,11 @@ $(function () {
     }
     multiSelectWithoutCtrl('#grave_diggers_id');
 
-
     (function autoFillBurialAmount(){
       const $site = $('#burial_site_id');
       const oopTotal = new URLSearchParams(window.location.search).get('oop_total');
       const hasOOP = !!oopTotal;
       function computeDefaultAmountBySiteName(nameText){
-
         const total = 3000 + 500;
         return total;
       }

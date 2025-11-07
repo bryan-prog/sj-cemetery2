@@ -1,4 +1,3 @@
-
 @extends('layouts.masterlayout')
 @inject('carbon','Carbon\Carbon')
 
@@ -24,7 +23,8 @@ $activeFamilyId = request()->has('family_id') && request('family_id') !== ''
 
 $__payload = request()->except([
   'slot_id','_token',
-  'transfer','reservation_id','from_slot_id','to_slot_id','curr_loc','exhum_dec_name','exhum_dod'
+  'transfer','reservation_id','from_slot_id','to_slot_id','curr_loc','exhum_dec_name','exhum_dod',
+  'selected_from_ids'
 ]);
 
 $showSaveReservation = !request()->boolean('transfer') && !empty($__payload);
@@ -136,6 +136,21 @@ if (! function_exists('slotClass')) {
 
   .border-primary               { border:3px solid #0d6efd!important }
   th.grid-head                  { font-size: 1rem !important;}
+
+  #exhumSubsetModal .list-group-item .form-check-input.subset-check{
+    margin: 0 .5rem 0 0 !important;
+    position: static;
+    float: none;
+  }
+  #exhumSubsetModal .list-group-item{
+    padding-left: .95rem;
+  }
+  #exhumSubsetModal .list-group-item:has(input:checked){
+    border-left: 4px solid #0d6efd;
+    background:#eef5ff;
+    padding-left: calc(.95rem - 4px);
+  }
+  #exhumSubsetModal .list-group-item span{ flex:1; min-width:0; }
 </style>
 
 @section('content')
@@ -213,10 +228,9 @@ if (! function_exists('slotClass')) {
               <label class="form-control-label">Date of Death (optional)</label>
               <input id="findDOD" type="date" class="form-control">
             </div>
-           <div class="col-md-4 d-flex gap-2">
+            <div class="col-md-4 d-flex gap-2">
               <button type="button" id="btnSearchDim" class="btn btn-success" data-mode="ready">Search &amp; Dim</button>
-
-           </div>
+            </div>
           </div>
           <div id="findMatches" class="list-group mt-2"></div>
         </div>
@@ -295,60 +309,57 @@ if (! function_exists('slotClass')) {
 
                           @foreach($cell->slots as $slot)
                             @php
-  $res = optional($slot->reservation);
-  $dec = $res->deceased;
-  $ren = $slot->renewals->sortByDesc('id')->first();
+                              $res = optional($slot->reservation);
+                              $dec = $res->deceased;
+                              $ren = $slot->renewals->sortByDesc('id')->first();
 
-  $statusDb = $slot->display_status ?? $slot->status ?? 'available';
+                              $statusDb = $slot->display_status ?? $slot->status ?? 'available';
 
+                              if ($statusDb === 'occupied') {
+                                  $buriedAt = null;
+                                  if ($res && $res->internment_sched) {
+                                      $buriedAt = \Carbon\Carbon::parse($res->internment_sched)->startOfDay();
+                                  } elseif (!empty($slot->occupancy_start)) {
+                                      $buriedAt = \Carbon\Carbon::parse($slot->occupancy_start)->startOfDay();
+                                  }
 
-  if ($statusDb === 'occupied') {
-      $buriedAt = null;
-      if ($res && $res->internment_sched) {
-          $buriedAt = \Carbon\Carbon::parse($res->internment_sched)->startOfDay();
-      } elseif (!empty($slot->occupancy_start)) {
-          $buriedAt = \Carbon\Carbon::parse($slot->occupancy_start)->startOfDay();
-      }
+                                  if ($buriedAt) {
+                                      $today  = now()->startOfDay();
+                                      $dueAt  = $buriedAt->copy()->addYears(5);
 
-      if ($buriedAt) {
-          $today  = now()->startOfDay();
-          $dueAt  = $buriedAt->copy()->addYears(5);
+                                      if ($latestApprovedEnd) {
+                                          $coverageEnd = \Carbon\Carbon::parse($latestApprovedEnd)->startOfDay();
+                                          $daysLeft    = $today->diffInDays($coverageEnd, false);
 
-          if ($latestApprovedEnd) {
-              $coverageEnd = \Carbon\Carbon::parse($latestApprovedEnd)->startOfDay();
-              $daysLeft    = $today->diffInDays($coverageEnd, false);
+                                          if ($daysLeft > 30) {
+                                              $statusDb = 'occupied';
+                                          } elseif ($daysLeft >= 0) {
+                                              $statusDb = 'for_renewal';
+                                          } else {
+                                              $statusDb = $hasPendingRenewal ? 'renewal_pending' : 'for_penalty';
+                                          }
+                                      } else {
+                                          $daysLeft = $today->diffInDays($dueAt, false);
 
-              if ($daysLeft > 30) {
-                  $statusDb = 'occupied';
-              } elseif ($daysLeft >= 0) {
-                  $statusDb = 'for_renewal';
-              } else {
-                  $statusDb = $hasPendingRenewal ? 'renewal_pending' : 'for_penalty';
-              }
-          } else {
-              $daysLeft = $today->diffInDays($dueAt, false);
+                                          if ($daysLeft > 30) {
+                                              $statusDb = 'occupied';
+                                          } elseif ($daysLeft >= 0) {
+                                              $statusDb = 'for_renewal';
+                                          } else {
+                                              $statusDb = $hasPendingRenewal ? 'renewal_pending' : 'for_penalty';
+                                          }
+                                      }
+                                  }
+                              }
 
-              if ($daysLeft > 30) {
-                  $statusDb = 'occupied';
-              } elseif ($daysLeft >= 0) {
-                  $statusDb = 'for_renewal';
-              } else {
-                  $statusDb = $hasPendingRenewal ? 'renewal_pending' : 'for_penalty';
-              }
-          }
-      }
-  }
+                              if (in_array($statusDb, ['occupied','for_renewal','for_penalty','renewal_pending'], true) && $cellState) {
+                                  $statusDb = $cellState;
+                              }
 
-
-  if (in_array($statusDb, ['occupied','for_renewal','for_penalty','renewal_pending'], true) && $cellState) {
-      $statusDb = $cellState;
-  }
-
-
-  $isAvailish = in_array($statusDb, ['available','exhumed'], true);
-  $statusUi   = ($lockedCellForApplicant && $isAvailish) ? 'reserved' : $statusDb;
-  $cls        = slotClass($statusUi);
-@endphp
+                              $isAvailish = in_array($statusDb, ['available','exhumed'], true);
+                              $statusUi   = ($lockedCellForApplicant && $isAvailish) ? 'reserved' : $statusDb;
+                              $cls        = slotClass($statusUi);
+                            @endphp
 
                             <div  class="slot-box {{ $cls }}"
                                   data-slot-id="{{ $slot->id }}"
@@ -357,6 +368,7 @@ if (! function_exists('slotClass')) {
                                   data-reservation="{{ $res?->id }}"
                                   data-row="{{ $r }}"
                                   data-col="{{ $c }}"
+                                  data-cell-id="{{ $cell->id }}"
                                   data-apartment="{{ $level->apartment?->name }}"
                                   data-level="{{ $level->level_no }}"
                                   data-deceased="{{ $dec?->name_of_deceased }}"
@@ -420,6 +432,37 @@ if (! function_exists('slotClass')) {
 @include('modals.slot-details')
 @include('modals.choose-site')
 
+
+<div class="modal fade" id="exhumSubsetModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-md">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title mb-0" style="display:flex;align-items:center;gap:.5rem;">
+          <img class="mr-2" src="https://img.icons8.com/doodle/30/checklist--v1.png"/>
+          Choose Occupants to Exhume
+        </h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="background:transparent;border:0;">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body" style="color:black;">
+        <div id="subsetCellLabel" class="mb-2 small text-muted"></div>
+        <div id="subsetList" class="list-group" style="max-height:50vh;overflow:auto;"></div>
+      </div>
+      <div class="modal-footer d-flex justify-content-between">
+        <div class="btn-group">
+          <button type="button" id="subsetSelectAll" class="btn btn-light btn-sm">Select all</button>
+          <button type="button" id="subsetClear" class="btn btn-light btn-sm">Clear</button>
+        </div>
+        <div>
+          <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+          <button type="button" id="subsetContinue" class="btn btn-primary btn-sm">Continue</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="modal fade" id="transferChoiceModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
@@ -428,7 +471,7 @@ if (! function_exists('slotClass')) {
           <img class="mr-2" src="https://img.icons8.com/doodle/30/question-mark--v1.png"/>
           Confirm Exhumation
         </h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="background:transparent;border:0;">
           <span aria-hidden="true">&times;</span>
         </button>
       </div>
@@ -470,7 +513,7 @@ if (! function_exists('slotClass')) {
   <div class="modal-dialog modal-dialog-centered modal-sm">
     <div class="modal-content">
       <div class="modal-header" style="border-bottom:0;">
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="background:transparent;border:0;">
           <span aria-hidden="true">&times;</span>
         </button>
       </div>
@@ -487,6 +530,10 @@ if (! function_exists('slotClass')) {
   </div>
 </div>
 
+<script>
+
+</script>
+
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
@@ -495,7 +542,7 @@ const ADD_SLOT_URL_TPL = @json(route('cells.slots.store',   ['cell' => '__CELL__
 const DEL_SLOT_URL_TPL = @json(route('cells.slots.destroy', ['cell' => '__CELL__']));
 
 const IN_APP_FLOW        = @json($showSaveReservation);
-const IN_TRANSFER   = @json(request()->boolean('transfer'));
+const IN_TRANSFER        = @json(request()->boolean('transfer'));
 const BURIAL_FORM_URL    = @json(url('/apply/burial'));
 const DEFAULT_SITE_ID    = @json($level->burial_site_id);
 const DEFAULT_LEVEL_ID   = @json($level->id);
@@ -512,68 +559,120 @@ $(function () {
   const renewalM= new bootstrap.Modal(document.getElementById('renewalModal'));
   const transferChoiceM = new bootstrap.Modal(document.getElementById('transferChoiceModal'));
   const successM= new bootstrap.Modal(document.getElementById('successModal'));
+  const subsetM = new bootstrap.Modal(document.getElementById('exhumSubsetModal'));
 
+  $(document).on('click', '#exhumSubsetModal .close, #exhumSubsetModal [data-dismiss="modal"]', function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('exhumSubsetModal')).hide();
+  });
 
-(function handleOOPForExhum(){
-  const qs    = new URLSearchParams(window.location.search);
-  const total = qs.get('oop_total');
-  const sel   = qs.get('oop_sel');
-  const resume= qs.get('resume');
+  let subsetSelectedIds = [];
 
-  if (sel) {
-    const url = new URL(window.location.href);
-    url.searchParams.set('oop_sel', sel);
-    window.history.replaceState({}, '', url.toString());
+  // ---------- FEE COMPUTATION HELPERS ----------
+  function computeExhumFees(count) {
+    const n = Math.max(1, parseInt(count || 1, 10));
+    const LABOR = 3000;
+    const EXH   = 300 * n;
+    const TRAN  = 200 * n;
+    const TOTAL = LABOR + EXH + TRAN;
+    return { n, labor: LABOR, exhum: EXH, transfer: TRAN, total: TOTAL };
   }
+  function refreshExhumFeePreview() {
+    const nSel = (subsetSelectedIds && subsetSelectedIds.length > 0) ? subsetSelectedIds.length : 1;
+    const fees = computeExhumFees(nSel);
 
+    const $amt = $('#exhum_amount_as_per_ord');
+    if ($amt.length) $amt.val(fees.total.toFixed(2));
 
-  if (total) {
-    const amt = (Number(total) || 0).toFixed(2);
-    $('#exhum_amount_display').val(amt);
-    $('#exhum_amount_as_per_ord').val(amt);
-    $('#exhumOopNote').removeClass('d-none');
-    $('#exhumBtnOOP').text('Edit OOP');
-  }
-
-
-  let shouldReopen = (resume === 'exhum');
-  try {
-    if (!shouldReopen && sessionStorage.getItem('resume_exhum') === '1') {
-      shouldReopen = true;
+    const $bd = $('#exhumFeeBreakdown');
+    if ($bd.length) {
+      const fmt = (window.__formatPeso) ? window.__formatPeso :
+        (n => Number(n || 0).toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2}));
+      $bd.html(
+        `Labor & materials: ₱${fmt(fees.labor)}<br>` +
+        `Exhumation (₱300 × ${fees.n}): ₱${fmt(fees.exhum)}<br>` +
+        `Transfer (₱200 × ${fees.n}): ₱${fmt(fees.transfer)}<br>` +
+        `<strong>Total: ₱${fmt(fees.total)}</strong>`
+      );
     }
-  } catch(e){}
+  }
+  // --------------------------------------------
 
-  if (!shouldReopen) return;
+  (function handleOOPForExhum(){
+    const qs    = new URLSearchParams(window.location.search);
+    const total = qs.get('oop_total');
+    const sel   = qs.get('oop_sel');
+    const resume= qs.get('resume');
 
-  function tryShow() {
+    if (sel) {
+      const url = new URL(window.location.href);
+      url.searchParams.set('oop_sel', sel);
+      window.history.replaceState({}, '', url.toString());
+    }
+
+    if (total) {
+      const amt = (Number(total) || 0).toFixed(2);
+      $('#exhum_amount_display').val(amt);
+      $('#exhum_amount_as_per_ord').val(amt);
+      $('#exhumOopNote').removeClass('d-none');
+      $('#exhumBtnOOP').text('Edit OOP');
+    }
+
+    let shouldReopen = (resume === 'exhum');
     try {
-      const el = document.getElementById('exhumReqModal');
-      if (!el) return false;
-      const m  = bootstrap.Modal.getOrCreateInstance(el, {backdrop:'static', keyboard:false});
-      m.show();
-      try { sessionStorage.removeItem('resume_exhum'); } catch(e){}
-      return true;
-    } catch (e) { return false; }
+      if (!shouldReopen && sessionStorage.getItem('resume_exhum') === '1') {
+        shouldReopen = true;
+      }
+    } catch(e){}
+
+    if (!shouldReopen) return;
+
+    function tryShow() {
+      try {
+        const el = document.getElementById('exhumReqModal');
+        if (!el) return false;
+        const m  = bootstrap.Modal.getOrCreateInstance(el, {backdrop:'static', keyboard:false});
+        m.show();
+        try { sessionStorage.removeItem('resume_exhum'); } catch(e){}
+        return true;
+      } catch (e) { return false; }
+    }
+
+    let tries = 0, maxTries = 40;
+    const tick = setInterval(() => {
+      tries++;
+      if (window.bootstrap && tryShow()) { clearInterval(tick); }
+      else if (tries >= maxTries)        { clearInterval(tick); }
+    }, 50);
+  })();
+
+  function ensureHiddenInsideTransfer(val){
+    const $f = $('#exhumationForm');
+    let $inp = $f.find('input[name="inside_transfer"]');
+    if ($inp.length === 0) {
+      $inp = $('<input type="hidden" name="inside_transfer">').appendTo($f);
+    }
+    $inp.val(String(val));
   }
 
-
-  let tries = 0, maxTries = 40;
-  const tick = setInterval(() => {
-    tries++;
-    if (window.bootstrap && tryShow()) { clearInterval(tick); }
-    else if (tries >= maxTries)        { clearInterval(tick); }
-  }, 50);
-})();
-
-
-function ensureHiddenInsideTransfer(val){
-  const $f = $('#exhumationForm');
-  let $inp = $f.find('input[name="inside_transfer"]');
-  if ($inp.length === 0) {
-    $inp = $('<input type="hidden" name="inside_transfer">').appendTo($f);
+  function syncSubsetHiddenInputs() {
+    const $f = $('#exhumationForm');
+    $f.find('input[name="selected_from_ids[]"]').remove();
+    (subsetSelectedIds || []).forEach(id => {
+      $('<input type="hidden" name="selected_from_ids[]">').val(String(id)).appendTo($f);
+    });
   }
-  $inp.val(String(val));
-}
+
+  function getArrayFromQS(name) {
+    const q = new URLSearchParams(window.location.search);
+    const out = [];
+
+    q.getAll(`${name}[]`).forEach(v => out.push(v));
+    q.getAll(name).forEach(v => out.push(v));
+    return out.map(v => parseInt(v,10)).filter(n => !isNaN(n));
+  }
+
   document.addEventListener('show.bs.modal', (e) => {
     document.querySelectorAll('.modal.show').forEach(m => {
       if (m !== e.target) bootstrap.Modal.getInstance(m)?.hide();
@@ -602,71 +701,69 @@ function ensureHiddenInsideTransfer(val){
     headers: {'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')}
   });
 
+  $(document).on('click', '.slot-box', function () {
+    if ($(this).hasClass('add-slot') || $(this).hasClass('remove-slot')) return;
 
- $(document).on('click', '.slot-box', function () {
-  if ($(this).hasClass('add-slot') || $(this).hasClass('remove-slot')) return;
+    const $box   = $(this);
+    const status = ($box.data('status') || '').toString();
+    const locked = String($box.data('locked')) === '1';
 
-  const $box   = $(this);
-  const status = ($box.data('status') || '').toString();
-  const locked = String($box.data('locked')) === '1';
+    const isAvailableLocal = st => (st === 'available' || st === 'exhumed');
 
-  const isAvailable = st => (st === 'available' || st === 'exhumed');
+    if (locked && isAvailableLocal(status)) { flash('This slot is reserved for another family.'); return; }
 
-  if (locked && isAvailable(status)) { flash('This slot is reserved for another family.'); return; }
+    if (picking) {
+      if (isAvailableLocal(status)) {
+        $('.slot-box[data-picked-transfer="1"]')
+          .removeClass('border-warning pulse')
+          .removeAttr('data-picked-transfer');
 
+        $box.addClass('border-warning pulse')
+            .attr('data-picked-transfer','1');
 
- if (picking) {
-  if (isAvailable(status)) {
+        $('#exhumationForm input[name=to_slot_id]').val($box.data('slot-id'));
+        const destLoc = `${$box.data('apartment')} • L${$box.data('level')} R${$box.data('row')} C${$box.data('col')} S${$.trim($box.text())}`;
+        $('#current_location_field').val(destLoc).prop('readonly,', true);
+        $('#current_location_field').val(destLoc).prop('readonly', true);
 
-    $('.slot-box[data-picked-transfer="1"]')
-      .removeClass('border-warning pulse')
-      .removeAttr('data-picked-transfer');
+        ensureHiddenInsideTransfer(1);
+        syncSubsetHiddenInputs();
 
-    $box.addClass('border-warning pulse')
-        .attr('data-picked-transfer','1');
+        // >>> NEW: compute preview for N selected
+        refreshExhumFeePreview();
 
-    $('#exhumationForm input[name=to_slot_id]').val($box.data('slot-id'));
-    const destLoc = `${$box.data('apartment')} • L${$box.data('level')} R${$box.data('row')} C${$box.data('col')} S${$.trim($box.text())}`;
-       $('#current_location_field').val(destLoc).prop('readonly', true);
+        picking = false;
+        formM.show();
+        return;
+      }
 
-    ensureHiddenInsideTransfer(1);
-    picking = false;
-    formM.show();
-    return;
-  }
+      buildDetails($box);
+      slotM.show();
+      return;
+    }
 
+    if (!IN_APP_FLOW && !IN_TRANSFER && isAvailableLocal(status)) {
+      const qs = new URLSearchParams({
+        selected_slot_id: String($box.data('slot-id')),
+        default_site_id : String(DEFAULT_SITE_ID),
+        default_level_id: String(DEFAULT_LEVEL_ID),
+        autogate: '1',
+        autostep:  'new'
+      });
+      window.location = `{{ route('burial.apply.gate') }}?` + qs.toString();
+      return;
+    }
 
-  buildDetails($box);
-  slotM.show();
-  return;
-}
+    if (!isAvailableLocal(status)) {
+      buildDetails($box);
+      slotM.show();
+      return;
+    }
 
-
-
-  if (!IN_APP_FLOW && !IN_TRANSFER && isAvailable(status)) {
-    const qs = new URLSearchParams({
-      selected_slot_id: String($box.data('slot-id')),
-      default_site_id : String(DEFAULT_SITE_ID),
-      default_level_id: String(DEFAULT_LEVEL_ID),
-      autogate: '1',
-      autostep:  'new'
-    });
-    window.location = `{{ route('burial.apply.gate') }}?` + qs.toString();
-    return;
-  }
-
-
-  if (!isAvailable(status)) {
-    buildDetails($box);
-    slotM.show();
-    return;
-  }
-
-
-  $('.border-primary').removeClass('border-primary');
-  $box.addClass('border-primary');
-  $('#slot_id').val($box.data('slot-id'));
-});
+    $('.border-primary').removeClass('border-primary');
+    $box.addClass('border-primary');
+    $('#slot_id').val($box.data('slot-id'));
+  });
 
   function buildDetails($b) {
     const st          = ($b.data('status') || '').toString();
@@ -746,65 +843,63 @@ function ensureHiddenInsideTransfer(val){
       </div>
     `;
 
-if (renStatus) {
-  const raw = (renStatus || '').toString().toLowerCase();
-  const disp = (raw === 'approved') ? 'renewed' : raw;
-  const badge = { pending:'warning', renewed:'success', denied:'danger' }[disp] || 'secondary';
+    if (renStatus) {
+      const raw = (renStatus || '').toString().toLowerCase();
+      const disp = (raw === 'approved') ? 'renewed' : raw;
+      const badge = { pending:'warning', renewed:'success', denied:'danger' }[disp] || 'secondary';
 
-  body += `
-    <div class="row mb-3">
-      <div class="col">
-        <label class="form-control-label">
-          <img src="https://img.icons8.com/doodle/20/available-updates.png"/> RENEWAL PERIOD
-        </label>
-        <input class="form-control" value="${renStart} → ${renEnd}" readonly>
-      </div>
-      <div class="col">
-        <label class="form-control-label">
-          <img src="https://img.icons8.com/plasticine/20/info-squared.png"/> RENEWAL STATUS
-        </label>
-        <div class="form-control bg-light">
-          <span class="badge bg-${badge}" style="font-size:0.85rem;" readonly>
-            ${disp.toUpperCase()}
-          </span>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-
-    const statusRaw       = (renStatus || '').toString().toLowerCase();
-    const slotUiStatus    = (st || '').toString().toLowerCase();
-    const isPenalty       = (slotUiStatus === 'for_penalty');
-    const isForRenewal    = (slotUiStatus === 'for_renewal');
-    const hasPendingRen   = (statusRaw === 'pending');
-
-    const canRequestRenewal    = (!hasPendingRen && (isPenalty || isForRenewal || statusRaw === 'denied'));
-    const canRequestExhumation = (statusRaw !== 'pending');
-
-    if (['occupied','reserved','renewal_pending','exhumation_pending','for_penalty','for_renewal'].includes(slotUiStatus)) {
       body += `
-        ${canRequestExhumation ? `
-          <button type="button"
-                  class="btn btn-danger me-2 mt-2 open-exhum-form"
-                  data-reservation="${$b.data('reservation') || ''}"
-                  data-from-slot="${$b.data('slot-id') || ''}">
-            Request Exhumation
-          </button>` : ''}
+        <div class="row mb-3">
+          <div class="col">
+            <label class="form-control-label">
+              <img src="https://img.icons8.com/doodle/20/available-updates.png"/> RENEWAL PERIOD
+            </label>
+            <input class="form-control" value="${renStart} → ${renEnd}" readonly>
+          </div>
+          <div class="col">
+            <label class="form-control-label">
+              <img src="https://img.icons8.com/plasticine/20/info-squared.png"/> RENEWAL STATUS
+            </label>
+            <div class="form-control bg-light">
+              <span class="badge bg-${badge}" style="font-size:0.85rem;" readonly>
+                ${disp.toUpperCase()}
+              </span>
+            </div>
+          </div>
+        </div>
+      `;
+    }
 
-        ${canRequestRenewal ? `
-          <button type="button"
-                  class="btn btn-warning mt-2 open-renewal-form"
-                  data-slot="${$b.data('slot-id') || ''}">
-            Request Renewal
-          </button>` : ''}
+    const slotUiStatus = (st || '').toString().toLowerCase();
+    const canRequestExhumation =
+      ['occupied','reserved','renewal_pending','for_penalty','for_renewal'].includes(slotUiStatus);
+
+    const canRequestRenewal =
+      !String($b.data('renewalStatus')||'').toLowerCase().includes('pending') &&
+      (slotUiStatus === 'for_penalty' || slotUiStatus === 'for_renewal' || String($b.data('renewalStatus')||'').toLowerCase() === 'denied');
+
+    if (canRequestExhumation) {
+      body += `
+        <button type="button"
+                class="btn btn-danger me-2 mt-2 open-exhum-form"
+                data-reservation="${$b.data('reservation') || ''}"
+                data-from-slot="${$b.data('slot-id') || ''}">
+          Request Exhumation
+        </button>
+      `;
+    }
+    if (canRequestRenewal) {
+      body += `
+        <button type="button"
+                class="btn btn-warning mt-2 open-renewal-form"
+                data-slot="${$b.data('slot-id') || ''}">
+          Request Renewal
+        </button>
       `;
     }
 
     $('#slotModal .modal-body').html(body);
   }
-
 
   $(document).on('click', '.add-slot', function () {
     const $btn   = $(this);
@@ -882,7 +977,111 @@ if (renStatus) {
     });
   });
 
+  function gatherExhumables($srcBox) {
+    const items = [];
+    const $group = $srcBox.closest('.slot-group');
+    const cellId = $srcBox.data('cell-id');
 
+    const EXHUMABLE_STATUSES = ['occupied','reserved','for_renewal','for_penalty','renewal_pending'];
+
+    $group.find('.slot-box').each(function(){
+      const $b = $(this);
+      if ($b.hasClass('add-slot') || $b.hasClass('remove-slot')) return;
+
+      const st  = String($b.data('status') || '').toLowerCase();
+      const res = String($b.data('reservation') || '');
+
+      const exhumable = EXHUMABLE_STATUSES.includes(st) && res.length > 0;
+
+      if (exhumable) {
+        items.push({
+          id: parseInt($b.data('slot-id'),10),
+          label: `${$b.data('deceased') || '—'} • S${$.trim($b.text())}`,
+          deceased: ($b.data('deceased') || '—').toString(),
+          slotNo: $.trim($b.text()),
+          cellId: cellId
+        });
+      }
+    });
+
+    return items.sort((a,b)=> parseInt(a.slotNo,10) - parseInt(b.slotNo,10));
+  }
+
+  function openSubsetModal($srcBox){
+    const items = gatherExhumables($srcBox);
+    subsetSelectedIds = [];
+
+    // If only one, just proceed with that one (clicked)
+    if (items.length <= 1) {
+      const only = items[0];
+      if (only) subsetSelectedIds = [only.id];
+      return false; // tell caller to skip modal
+    }
+
+    // Build list, default to clicked occupant only
+    const clickedId = parseInt($srcBox.data('slot-id'),10);
+    let html = '';
+    items.forEach(it => {
+      const checked = (it.id === clickedId) ? 'checked' : '';
+      if (it.id === clickedId) subsetSelectedIds = [it.id];
+      html += `
+        <label class="list-group-item d-flex align-items-center" style="gap:.5rem;">
+          <input type="checkbox" class="form-check-input subset-check" value="${it.id}" ${checked}/>
+          <span>${$('<div/>').text(it.label).html()}</span>
+        </label>
+      `;
+    });
+
+    $('#subsetList').html(html);
+    const cellLabel = `${$srcBox.data('apartment')} • L${$srcBox.data('level')} R${$srcBox.data('row')} C${$srcBox.data('col')}`;
+    $('#subsetCellLabel').text(cellLabel);
+
+    subsetM.show();
+    return true; // modal opened
+  }
+
+  // subset modal controls
+  $(document).on('change', '.subset-check', function(){
+    const id = parseInt($(this).val(),10);
+    if (this.checked) {
+      if (!subsetSelectedIds.includes(id)) subsetSelectedIds.push(id);
+    } else {
+      subsetSelectedIds = subsetSelectedIds.filter(x => x !== id);
+    }
+  });
+  $('#subsetSelectAll').on('click', function(){
+    subsetSelectedIds = [];
+    $('.subset-check').each(function(){
+      this.checked = true;
+      subsetSelectedIds.push(parseInt(this.value,10));
+    });
+  });
+  $('#subsetClear').on('click', function(){
+    subsetSelectedIds = [];
+    $('.subset-check').prop('checked', false);
+  });
+
+  let pendingAfterSubset = null; // function to call after subset selection
+
+  $('#subsetContinue').on('click', function(){
+    if (!subsetSelectedIds.length) {
+      flash('Select at least one occupant.');
+      return;
+    }
+    subsetM.hide();
+    if (typeof pendingAfterSubset === 'function') {
+      // ensure form carries subset for next steps
+      syncSubsetHiddenInputs();
+
+      // >>> NEW: fees update when continuing from subset
+      refreshExhumFeePreview();
+
+      pendingAfterSubset();
+      pendingAfterSubset = null;
+    }
+  });
+
+  // === OPEN EXHUM FORM (now supports subset first) ===
   $(document).on('click', '.open-exhum-form', function () {
     const fromSlot = $(this).data('from-slot');
     fromSlotId    = fromSlot;
@@ -900,12 +1099,32 @@ if (renStatus) {
 
     slotM.hide();
 
+    // Fill transfer choice preview labels (optional UI if you show them)
     $('#tcDeceased').text($srcBox.data('deceased') || '—');
     $('#tcCurrLoc').text($('#exhum_current_location').val() || '—');
 
-    transferChoiceM.show();
+    // Open subset first if cell has multiple exhumables
+    const opened = openSubsetModal($srcBox);
+    const goNext = () => {
+      // sync reservation/from to form; subset hidden inputs also synced
+      $('#exhumationForm input[name=reservation_id]').val(reservationId);
+      $('#exhumationForm input[name=from_slot_id]').val(fromSlotId);
+      syncSubsetHiddenInputs();
+      transferChoiceM.show();
+    };
+
+    if (opened) {
+      pendingAfterSubset = goNext;
+    } else {
+      // single occupant only (or none) – default to clicked
+      syncSubsetHiddenInputs();
+      $('#exhumationForm input[name=reservation_id]').val(reservationId);
+      $('#exhumationForm input[name=from_slot_id]').val(fromSlotId);
+      transferChoiceM.show();
+    }
   });
 
+  // === INSIDE / OUTSIDE choice ===
   $('#btnInsideTransfer').on('click', function () {
     try { transferChoiceM.hide(); } catch(e){}
     $('#modal_site').val('');
@@ -917,6 +1136,8 @@ if (renStatus) {
   $('#btnOutsideTransfer').on('click', function () {
     try { transferChoiceM.hide(); } catch(e){}
     ensureHiddenInsideTransfer(0);
+    // Make sure selected subset is carried into the form
+    syncSubsetHiddenInputs();
     openExhumationForm('', '', false);
   });
 
@@ -943,14 +1164,20 @@ if (renStatus) {
     const decName = ($srcBox.data('deceased')  || '').toString();
     const decDod  = ($srcBox.data('deathdate') || '').toString().substring(0,10);
 
-    const qs = $.param({
+    const base = {
       transfer:       1,
       reservation_id: reservationId,
       from_slot_id:   fromSlotId,
       curr_loc:       $('#exhum_current_location').val(),
       exhum_dec_name: decName,
       exhum_dod:      decDod
+    };
+
+    let qs = $.param(base);
+    (subsetSelectedIds || []).forEach(id => {
+      qs += `&selected_from_ids[]=${encodeURIComponent(String(id))}`;
     });
+
     window.location = `{{ url('/') }}/levels/${lvl}/grid?` + qs;
   });
 
@@ -958,84 +1185,90 @@ if (renStatus) {
     picking = true;
     $('#exhumationForm input[name=reservation_id]').val("{{ request('reservation_id') }}");
     $('#exhumationForm input[name=from_slot_id]').val("{{ request('from_slot_id') }}");
+
+    subsetSelectedIds = getArrayFromQS('selected_from_ids');
+    if (subsetSelectedIds.length === 0) {
+      const fallback = parseInt("{{ request('from_slot_id') }}",10);
+      if (!isNaN(fallback)) subsetSelectedIds = [fallback];
+    }
+    syncSubsetHiddenInputs();
+    // Optional: precompute even before modal opens
+    refreshExhumFeePreview();
   @endif
 
+  $(document).on('click', '.open-renewal-form', function () {
+    const slotId = $(this).data('slot');
+    const $box   = $(`.slot-box[data-slot-id="${slotId}"]`);
+    const resId  = $box.data('reservation');
 
-$(document).on('click', '.open-renewal-form', function () {
-  const slotId = $(this).data('slot');
-  const $box   = $(`.slot-box[data-slot-id="${slotId}"]`);
-  const resId  = $box.data('reservation');
+    $box.closest('td').removeClass('cell-penalty');
 
-  $box.closest('td').removeClass('cell-penalty');
+    $('#renewalForm input[name=slot_id]').val(slotId);
+    $('#renewalForm input[name=reservation_id]').val(resId);
 
-  $('#renewalForm input[name=slot_id]').val(slotId);
-  $('#renewalForm input[name=reservation_id]').val(resId);
+    const today = new Date();
+    const todayStr = today.toISOString().substring(0,10);
+    $('#renewal_start').val(todayStr);
+    $('#renewal_end').val(`${today.getFullYear()+5}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`);
 
-  const today = new Date();
-  const todayStr = today.toISOString().substring(0,10);
-  $('#renewal_start').val(todayStr);
-  $('#renewal_end').val(`${today.getFullYear()+5}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`);
-
-  function parseISO(s){ if(!s) return null; const d=new Date(s); return isNaN(d)?null:d; }
-  function addYears(d,n){ const x=new Date(d.getTime()); x.setFullYear(x.getFullYear()+n); return x; }
-  function diffFullYears(a,b){
-    let y=b.getFullYear()-a.getFullYear();
-    if (b.getMonth()<a.getMonth() || (b.getMonth()==a.getMonth() && b.getDate()<a.getDate())) y--;
-    return y<0?0:y;
-  }
-
-
-  function getCoverageEnd(){
-    const renStatus = String($box.data('renewalStatus') || '').toLowerCase();
-    const renEnd    = String($box.data('renewalEnd') || '').substring(0,10);
-    const intern    = String($box.data('internment') || '').substring(0,10);
-    const dod       = String($box.data('deathdate') || '').substring(0,10);
-
-    if (renStatus === 'approved' && renEnd) {
-      const d = parseISO(renEnd); if (d) return d;
+    function parseISO(s){ if(!s) return null; const d=new Date(s); return isNaN(d)?null:d; }
+    function addYears(d,n){ const x=new Date(d.getTime()); x.setFullYear(x.getFullYear()+n); return x; }
+    function diffFullYears(a,b){
+      let y=b.getFullYear()-a.getFullYear();
+      if (b.getMonth()<a.getMonth() || (b.getMonth()==a.getMonth() && b.getDate()<a.getDate())) y--;
+      return y<0?0:y;
     }
-    const anchor = parseISO(intern) || parseISO(dod);
-    return anchor ? addYears(anchor, 5) : null;
-  }
 
-  function calcBaseAmount(){
-    const site = (String($box.data('apartment') || '').trim().toLowerCase());
-    const rate = (site === 'left side restos') ? 100 : 300;
-    const start = parseISO($('#renewal_start').val());
-    const end   = parseISO($('#renewal_end').val());
-    const yrs   = start && end ? Math.max(1, diffFullYears(start, end)) : 5;
-    return yrs * rate;
-  }
+    function getCoverageEnd(){
+      const renStatus = String($box.data('renewalStatus') || '').toLowerCase();
+      const renEnd    = String($box.data('renewalEnd') || '').substring(0,10);
+      const intern    = String($box.data('internment') || '').substring(0,10);
+      const dod       = String($box.data('deathdate') || '').substring(0,10);
 
-  function calcPenaltyAmount(){
-    const start = parseISO($('#renewal_start').val());
-    if(!start) return 0;
-    const covEnd = getCoverageEnd();
-    if(!covEnd) return 0;
-    if (start <= covEnd) return 0;
-    return diffFullYears(covEnd, start) * 50;
-  }
-
-  function refreshTotal(){
-    const total = (calcBaseAmount() + calcPenaltyAmount()).toFixed(2);
-    $('#renewalForm input[name=amount_as_per_ord]').val(total);
-  }
-
-  refreshTotal();
-
-  $('#renewal_start, #renewal_end').off('.ord').on('change.ord', function(){
-    if (this.id === 'renewal_start') {
-      const d = parseISO(this.value); if (d) {
-        $('#renewal_end').val(`${d.getFullYear()+5}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+      if (renStatus === 'approved' && renEnd) {
+        const d = parseISO(renEnd); if (d) return d;
       }
+      const anchor = parseISO(intern) || parseISO(dod);
+      return anchor ? addYears(anchor, 5) : null;
     }
+
+    function calcBaseAmount(){
+      const site = (String($box.data('apartment') || '').trim().toLowerCase());
+      const rate = (site === 'left side restos') ? 100 : 300;
+      const start = parseISO($('#renewal_start').val());
+      const end   = parseISO($('#renewal_end').val());
+      const yrs   = start && end ? Math.max(1, diffFullYears(start, end)) : 5;
+      return yrs * rate;
+    }
+
+    function calcPenaltyAmount(){
+      const start = parseISO($('#renewal_start').val());
+      if(!start) return 0;
+      const covEnd = getCoverageEnd();
+      if(!covEnd) return 0;
+      if (start <= covEnd) return 0;
+      return diffFullYears(covEnd, start) * 50;
+    }
+
+    function refreshTotal(){
+      const total = (calcBaseAmount() + calcPenaltyAmount()).toFixed(2);
+      $('#renewalForm input[name=amount_as_per_ord]').val(total);
+    }
+
     refreshTotal();
+
+    $('#renewal_start, #renewal_end').off('.ord').on('change.ord', function(){
+      if (this.id === 'renewal_start') {
+        const d = parseISO(this.value); if (d) {
+          $('#renewal_end').val(`${d.getFullYear()+5}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+        }
+      }
+      refreshTotal();
+    });
+
+    slotM.hide();
+    renewalM.show();
   });
-
-  slotM.hide();
-  renewalM.show();
-});
-
 
   $('#renewal_start').on('change', function () {
     const [y,m,d] = this.value.split('-').map(Number);
@@ -1052,11 +1285,14 @@ $(document).on('click', '.open-renewal-form', function () {
 
     $('#current_location_field').val(locLabel).prop('readonly', readOnly);
 
+    // carry subset + compute fees based on count
+    syncSubsetHiddenInputs();
+    refreshExhumFeePreview();
+
     if (readOnly) { $('#exhum_deceased_name, #exhum_date_of_death').val(''); }
 
     formM.show();
   }
-
 
   @if(session('renewal_success'))  showSuccess(@json(session('renewal_success'))); @endif
   @if(session('exhumation_success'))showSuccess(@json(session('exhumation_success')));@endif
@@ -1065,7 +1301,6 @@ $(document).on('click', '.open-renewal-form', function () {
   const qs = new URLSearchParams(window.location.search);
   if(qs.get('renewal') === 'success'){ showSuccess('Renewal request submitted successfully.'); }
   if(qs.get('exhumation') === 'success'){ showSuccess('Exhumation request submitted successfully.'); }
-
 
   const allSlots = [];
   const nameSet = new Set();
@@ -1113,17 +1348,14 @@ $(document).on('click', '.open-renewal-form', function () {
     }
   });
 
-
   [...document.querySelectorAll('[data-bs-toggle="tooltip"]')].forEach(el => {
     new bootstrap.Tooltip(el, { trigger: 'hover focus' });
   });
-
 
   const $dl = $('#deceasedList');
   [...nameSet].sort((a,b)=>a.localeCompare(b)).forEach(n => {
     $dl.append(`<option value="${$('<div/>').text(n).html()}"></option>`);
   });
-
 
   const $results = $('#findMatches');
   let lastMatchedIds = new Set();
@@ -1159,32 +1391,32 @@ $(document).on('click', '.open-renewal-form', function () {
     });
   }
 
- function doFind(dimAfter = false) {
-  clearHighlights();
+  function doFind(dimAfter = false) {
+    clearHighlights();
 
-  const qName = norm($('#findName').val());
-  const qDoD  = ($('#findDOD').val() || '').trim();
+    const qName = norm($('#findName').val());
+    const qDoD  = ($('#findDOD').val() || '').trim();
 
-  if (!qName && !qDoD) {
-    $results.empty().append(`<div class="list-group-item text-muted">Type a name (and/or pick a date) then press Search.</div>`);
-    if (dimAfter) applyDimming(false), setSearchMode('ready');
-    return;
+    if (!qName && !qDoD) {
+      $results.empty().append(`<div class="list-group-item text-muted">Type a name (and/or pick a date) then press Search.</div>`);
+      if (dimAfter) applyDimming(false), setSearchMode('ready');
+      return;
+    }
+
+    const matches = allSlots.filter(s => {
+      const nameOk = qName ? s.nameN.includes(qName) : true;
+      const dodOk  = qDoD ? (s.dod || '').startsWith(qDoD) : true;
+      return nameOk && dodOk;
+    });
+
+    renderResults(matches);
+    matches.forEach(m => lastMatchedIds.add(m.id));
+
+    if (dimAfter) {
+      applyDimming(true);
+      setSearchMode('dimmed');
+    }
   }
-
-  const matches = allSlots.filter(s => {
-    const nameOk = qName ? s.nameN.includes(qName) : true;
-    const dodOk  = qDoD ? (s.dod || '').startsWith(qDoD) : true;
-    return nameOk && dodOk;
-  });
-
-  renderResults(matches);
-  matches.forEach(m => lastMatchedIds.add(m.id));
-
-  if (dimAfter) {
-    applyDimming(true);
-    setSearchMode('dimmed');
-  }
-}
 
   function applyDimming(active) {
     $('.slot-box').each(function(){
@@ -1198,42 +1430,35 @@ $(document).on('click', '.open-renewal-form', function () {
   }
 
   function setSearchMode(mode){
-  const $b = $('#btnSearchDim');
-  if (mode === 'dimmed') {
-    $b.text('Undim non-matches').attr('data-mode','dimmed');
-  } else {
-    $b.text('Search & Dim').attr('data-mode','ready');
+    const $b = $('#btnSearchDim');
+    if (mode === 'dimmed') {
+      $b.text('Undim non-matches').attr('data-mode','dimmed');
+    } else {
+      $b.text('Search & Dim').attr('data-mode','ready');
+    }
   }
-}
 
-$('#btnSearchDim').on('click', function(){
-  const mode = $(this).attr('data-mode');
-  if (mode === 'ready') {
+  $('#btnSearchDim').on('click', function(){
+    const mode = $(this).attr('data-mode');
+    if (mode === 'ready') {
+      doFind(true);
+    } else {
+      applyDimming(false);
+      setSearchMode('ready');
+    }
+  });
 
-    doFind(true);
-  } else {
+  $('#findName').on('keyup', e => { if (e.key === 'Enter') doFind(true); });
+  $('#findDOD').on('change', () => doFind(true));
 
+  $('#btnClear').on('click', function(){
+    $('#findName').val('');
+    $('#findDOD').val('');
+    $results.empty();
+    clearHighlights();
     applyDimming(false);
     setSearchMode('ready');
-  }
-});
-
-
-$('#findName').on('keyup', e => { if (e.key === 'Enter') doFind(true); });
-$('#findDOD').on('change', () => doFind(true));
-
-
-$('#btnClear').on('click', function(){
-  $('#findName').val('');
-  $('#findDOD').val('');
-  $results.empty();
-  clearHighlights();
-  applyDimming(false);
-  setSearchMode('ready');
-});
-
-
-
+  });
 
   const urlQS = new URLSearchParams(window.location.search);
   const focusId = urlQS.get('focus_slot_id');
@@ -1251,11 +1476,11 @@ $('#btnClear').on('click', function(){
         slotM.show();
       }
     }
-} else if (findNameQS) {
-  $('#findName').val(findNameQS);
-  doFind(true);
-  setSearchMode('dimmed');
-}
+  } else if (findNameQS) {
+    $('#findName').val(findNameQS);
+    doFind(true);
+    setSearchMode('dimmed');
+  }
 });
 </script>
 

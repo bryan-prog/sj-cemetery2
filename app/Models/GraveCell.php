@@ -6,7 +6,14 @@ use Illuminate\Database\Eloquent\Model;
 
 class GraveCell extends Model
 {
-    protected $fillable = ['level_id','row_no','col_no','has_three_slots', 'family_id', 'max_slots'];
+    protected $fillable = ['level_id','row_no','col_no','has_three_slots', 'family_id', 'max_slots', 'first_anchor_at'];
+
+
+
+
+    protected $casts = [
+         'first_anchor_at' => 'date',
+    ];
 
     public function level()
     {

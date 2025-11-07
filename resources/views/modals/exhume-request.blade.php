@@ -115,7 +115,7 @@
             <div class="col-md-4">
               <label class="form-control-label">
                 <img src="https://img.icons8.com/doodle/20/refund.png" alt="fee">
-                Payment&nbsp;as&nbsp;per&nbsp;Ord.
+                Payment&nbsp;as&nbsp;per&nbsp;Ord. (Auto)
               </label>
               <input
                 type="number"
@@ -123,16 +123,14 @@
                 id="exhum_amount_as_per_ord"
                 class="form-control"
                 value="3500"
-                min="3500"
-                max="3500"
+                min="0"
                 step="1"
                 readonly
                 onwheel="return false"
                 onkeydown="return false"
               >
-              <small class="text-muted d-block mt-1">
-                Fixed amount as per ordinance.
-              </small>
+
+              <div id="exhumFeeBreakdown" class="mt-2 small text-muted"></div>
             </div>
             <div class="col-md-4">
               <label class="form-control-label">
@@ -172,17 +170,16 @@ $(function(){
   function syncCremationUI(){
     if ($cb.is(':checked')) {
       $label.html('<img src="https://img.icons8.com/doodle/20/address.png" alt="to"> Cremation&nbsp;Location');
-      if ($loc.is('[readonly]')) {
-      } else {
-        $loc.attr('placeholder','e.g., Crematorium / Address');
-      }
+      if (!$loc.is('[readonly]')) $loc.attr('placeholder','e.g., Crematorium / Address');
     } else {
       $label.html('<img src="https://img.icons8.com/doodle/20/address.png" alt="to"> Transfer&nbsp;Location');
       $loc.attr('placeholder','');
     }
   }
-
   $cb.on('change', syncCremationUI);
   syncCremationUI();
+
+
+  window.__formatPeso = (n) => Number(n || 0).toLocaleString('en-PH', {minimumFractionDigits:2, maximumFractionDigits:2});
 });
 </script>

@@ -149,53 +149,70 @@ class ReportController extends Controller
         return $pdf->stream('renewal-permit-'.$renewal->id.'.pdf');
     }
 
-    public function exhumationPermit(Exhumation $exhumation)
-    {
-        $exhumation->loadMissing([
-            'reservation.deceased',
-            'reservation.slot.cell.level.apartment',
-            'fromSlot.cell.level.apartment',
-            'toSlot.cell.level.apartment',
-            'verifier',
-        ]);
+  public function exhumationPermit(Exhumation $exhumation)
+{
+    $exhumation->loadMissing([
+        'reservation.deceased',
+        'reservation.slot.cell.level.apartment',
+        'fromSlot.cell.level.apartment',
+        'toSlot.cell.level.apartment',
+        'verifier',
+    ]);
 
-        $dec = $exhumation->reservation?->deceased;
+    $dec = $exhumation->reservation?->deceased;
 
-        $burialLocation = $this->formatLocation($exhumation->fromSlot)
-            ?: $this->formatLocation($exhumation->reservation?->slot)
-            ?: ($exhumation->current_location ?: '—');
+    $burialLocation = $this->formatLocation($exhumation->fromSlot)
+        ?: $this->formatLocation($exhumation->reservation?->slot)
+        ?: ($exhumation->current_location ?: '—');
 
-        $transferDestination = $exhumation->to_slot_id
-            ? ($this->formatLocation($exhumation->toSlot) ?? '—')   // inside transfer
-            : ($exhumation->current_location ?: '—');               // outside transfer
+    $transferDestination = $exhumation->to_slot_id
+        ? ($this->formatLocation($exhumation->toSlot) ?? '—')
+        : ($exhumation->current_location ?: '—');
 
-        $deceasedName = $dec?->name_of_deceased ?? '—';
-        $deathDate    = $dec?->date_of_death ? Carbon::parse($dec->date_of_death)->format('F d, Y') : '—';
+    $deceasedName = $dec?->name_of_deceased ?? '—';
+    $deathDate    = $dec?->date_of_death ? \Carbon\Carbon::parse($dec->date_of_death)->format('F d, Y') : '—';
 
-        $dateIssued   = $exhumation->or_issued_at
-            ? Carbon::parse($exhumation->or_issued_at)->format('F d, Y')
-            : ($exhumation->date_applied ? Carbon::parse($exhumation->date_applied)->format('F d, Y') : now()->format('F d, Y'));
+    $dateIssued   = $exhumation->or_issued_at
+        ? \Carbon\Carbon::parse($exhumation->or_issued_at)->format('F d, Y')
+        : ($exhumation->date_applied ? \Carbon\Carbon::parse($exhumation->date_applied)->format('F d, Y') : now()->format('F d, Y'));
 
-        $feeNumeric   = is_null($exhumation->amount_as_per_ord) ? '—' : number_format((float)$exhumation->amount_as_per_ord, 2);
-        $verifierName = $exhumation->verifier?->name_of_verifier ?? '—';
+    $feeNumeric   = is_null($exhumation->amount_as_per_ord) ? '—' : number_format((float)$exhumation->amount_as_per_ord, 2);
+    $verifierName = $exhumation->verifier?->name_of_verifier ?? '—';
 
-        $isCremation  = (bool) ($exhumation->for_cremation ?? false);
+    $isCremation  = (bool) ($exhumation->for_cremation ?? false);
 
-        $pdf = Pdf::loadView('Permits.exhumation_permit', [
-            'exhumation'          => $exhumation,
-            'deceasedName'        => $deceasedName,
-            'deathDate'           => $deathDate,
-            'burialLocation'      => $burialLocation,
-            'transferDestination' => $transferDestination,
-            'isCremation'         => $isCremation,
-            'dateIssued'          => $dateIssued,
-            'feeNumeric'          => $feeNumeric,
-            'verifierName'        => $verifierName,
-        ])->setPaper('A4', 'portrait');
 
-        $pdf->setBasePath(public_path());
-        return $pdf->stream('exhumation-permit-'.$exhumation->id.'.pdf');
+    $dest         = trim((string)($transferDestination ?? '—'));
+    if ($dest === '') $dest = '—';
+    $prefixCrem   = 'FOR CREMATION - TRANSFER LOCATION :';
+    $prefixTrans  = 'FOR TRANSFER:';
+
+    if ($isCremation) {
+
+        $transferLine = (stripos($dest, $prefixCrem) === 0) ? $dest : ($prefixCrem.' '.$dest);
+    } else {
+
+        $transferLine = (stripos($dest, $prefixTrans) === 0) ? $dest : ($prefixTrans.' '.$dest);
     }
+
+    $transferLine = rtrim($transferLine, " .");
+
+    $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('Permits.exhumation_permit', [
+        'exhumation'          => $exhumation,
+        'deceasedName'        => $deceasedName,
+        'deathDate'           => $deathDate,
+        'burialLocation'      => $burialLocation,
+        'transferDestination' => $transferDestination,
+        'transferLine'        => $transferLine,
+        'isCremation'         => $isCremation,
+        'dateIssued'          => $dateIssued,
+        'feeNumeric'          => $feeNumeric,
+        'verifierName'        => $verifierName,
+    ])->setPaper('A4', 'portrait');
+
+    $pdf->setBasePath(public_path());
+    return $pdf->stream('exhumation-permit-'.$exhumation->id.'.pdf');
+}
 
     public function burialApplication(Request $request, Reservation $reservation)
     {

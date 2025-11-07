@@ -522,8 +522,7 @@ $(function(){
         if (carriedLevel) params.append('default_level_id', carriedLevel);
         if (carriedSlot)  params.append('selected_slot_id', carriedSlot);
        const prefillEmail = data.applicant_email || data.email;
-if (prefillEmail) params.append('prefill_applicant_email', prefillEmail);
-
+       if (prefillEmail) params.append('prefill_applicant_email', prefillEmail);
         window.location = withCarry(base + '?' + params.toString());
       } else {
         $('#newFamilyAlert').removeClass('d-none').text('Unexpected response from server.');
